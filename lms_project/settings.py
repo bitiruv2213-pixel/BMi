@@ -177,7 +177,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 PASSWORD_RESET_TIMEOUT = 86400
 
 # ==================== GEMINI API ====================
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyCAjml9CvvmY2gZoGrlSUeLvYseXQwN4IY')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
 # Public base URL (emails/certificates)
 SITE_URL = os.environ.get('SITE_URL', 'http://127.0.0.1:8000')
