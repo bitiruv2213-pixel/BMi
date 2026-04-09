@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Topshiriq qo'shish - LMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'course_detail' lesson.course.slug %}">{{ lesson.course.title }}</a></li>
+                <li class="breadcrumb-item">{{ lesson.title }}</li>
+                <li class="breadcrumb-item active">Topshiriq qo'shish</li>
+            </ol>
+        </nav>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clipboard-plus me-2"></i>Yangi topshiriq - {{ lesson.title }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Topshiriq nomi</label>
+                        {{ form.title }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tavsif</label>
+                        {{ form.description }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Topshirish muddati</label>
+                            {{ form.due_date }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Maksimal ball</label>
+                            {{ form.max_score }}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>Saqlash
+                        </button>
+                        <a href="{% url 'course_detail' lesson.course.slug %}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg me-2"></i>Bekor qilish
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

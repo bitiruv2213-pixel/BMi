@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}To'lov muvaffaqiyatli!{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-5">
+                    <div class="mb-4">
+                        <div class="rounded-circle bg-success d-inline-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                            <i class="bi bi-check-lg text-white" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                    <h2 class="text-success mb-3">To'lov muvaffaqiyatli!</h2>
+                    <p class="text-muted mb-4">Tabriklaymiz! Siz <strong>{{ course.title }}</strong> kursiga yozildingiz.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'course_learn' course.slug %}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-play-fill me-2"></i>O'rganishni boshlash
+                        </a>
+                        <a href="{% url 'my_courses' %}" class="btn btn-outline-secondary">Mening kurslarim</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

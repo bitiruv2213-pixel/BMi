@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Mening kurslarim{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-collection-play me-2"></i>Mening kurslarim</h2>
+        <a href="{% url 'teacher_course_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i>Yangi kurs
+        </a>
+    </div>
+
+    {% if courses %}
+    <div class="row">
+        {% for course in courses %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                {% if course.thumbnail %}
+                <img src="{{ course.thumbnail.url }}" class="card-img-top" style="height: 180px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center" style="height: 180px; background: linear-gradient(135deg, #667eea, #764ba2);">
+                    <i class="bi bi-play-circle text-white" style="font-size: 4rem;"></i>
+                </div>
+                {% endif %}
+                
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        {% if course.is_published %}<span class="badge bg-success">Faol</span>{% else %}<span class="badge bg-secondary">Qoralama</span>{% endif %}
+                        {% if course.is_free %}<span class="badge bg-info">Bepul</span>{% else %}<span class="badge bg-warning text-dark">{{ course.price|floatformat:0 }} so'm</span>{% endif %}
+                    </div>
+                    <h5 class="card-title">{{ course.title|truncatewords:5 }}</h5>
+                    <div class="d-flex justify-content-between text-muted small">
+                        <span><i class="bi bi-people"></i> {{ course.enrolled_count }}</span>
+                        <span><i class="bi bi-play-circle"></i> {{ course.total_lessons }}</span>
+                        <span><i class="bi bi-star-fill text-warning"></i> {{ course.average_rating|floatformat:1 }}</span>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'teacher_course_students' course.slug %}" class="btn btn-outline-info flex-grow-1"><i class="bi bi-people"></i> Talabalar</a>
+                        <a href="{% url 'teacher_course_edit' course.slug %}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <a href="{% url 'teacher_course_delete' course.slug %}" class="btn btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-collection display-1 text-muted"></i>
+            <h4 class="text-muted mt-3">Hali kurslar yo'q</h4>
+            <a href="{% url 'teacher_course_create' %}" class="btn btn-primary btn-lg mt-2"><i class="bi bi-plus-lg me-2"></i>Kurs yaratish</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

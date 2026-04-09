@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}To'lov muvaffaqiyatli!{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-5">
+                    <!-- Success Icon -->
+                    <div class="mb-4">
+                        <div class="rounded-circle bg-success d-inline-flex align-items-center justify-content-center"
+                             style="width: 100px; height: 100px;">
+                            <i class="bi bi-check-lg text-white" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-success mb-3">To'lov muvaffaqiyatli!</h2>
+                    <p class="text-muted mb-4">
+                        Tabriklaymiz! Siz <strong>{{ course.title }}</strong> kursiga muvaffaqiyatli yozildingiz.
+                    </p>
+                    
+                    <!-- Course Info -->
+                    <div class="bg-light rounded p-3 mb-4">
+                        <div class="d-flex align-items-center justify-content-center">
+                            {% if course.thumbnail %}
+                            <img src="{{ course.thumbnail.url }}" class="rounded me-3" 
+                                 style="width: 80px; height: 60px; object-fit: cover;">
+                            {% else %}
+                            <div class="rounded me-3 d-flex align-items-center justify-content-center"
+                                 style="width: 80px; height: 60px; background: linear-gradient(135deg, #667eea, #764ba2);">
+                                <i class="bi bi-play-circle text-white" style="font-size: 1.5rem;"></i>
+                            </div>
+                            {% endif %}
+                            <div class="text-start">
+                                <h6 class="mb-0">{{ course.title }}</h6>
+                                <small class="text-muted">{{ course.total_lessons }} ta dars</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'course_learn' course.slug %}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-play-fill me-2"></i>O'rganishni boshlash
+                        </a>
+                        <a href="{% url 'my_courses' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-collection me-2"></i>Mening kurslarim
+                        </a>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <p class="small text-muted mb-0">
+                        <i class="bi bi-envelope me-1"></i>
+                        To'lov kvitansiyasi emailingizga yuborildi.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

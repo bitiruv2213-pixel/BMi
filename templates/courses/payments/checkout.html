@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}To'lov - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="mb-4">
+                <h2><i class="bi bi-cart-check me-2"></i>Kursni sotib olish</h2>
+            </div>
+
+            <div class="row">
+                <div class="col-md-7 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Buyurtma</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex mb-4">
+                                {% if course.thumbnail %}
+                                <img src="{{ course.thumbnail.url }}" class="rounded me-3" style="width: 120px; height: 80px; object-fit: cover;">
+                                {% else %}
+                                <div class="rounded me-3 d-flex align-items-center justify-content-center" style="width: 120px; height: 80px; background: linear-gradient(135deg, #667eea, #764ba2);">
+                                    <i class="bi bi-play-circle text-white" style="font-size: 2rem;"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <h6 class="mb-1">{{ course.title }}</h6>
+                                    <p class="text-muted small mb-0">{{ course.teacher.get_full_name }}</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">Jami</span>
+                                <span class="fw-bold fs-5 text-primary">{{ final_price|floatformat:0 }} so'm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>To'lov usuli</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="{% url 'payment_process' course.slug %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="amount" value="{{ final_price }}">
+
+                                <div class="mb-3">
+                                    <div class="form-check mb-2 p-3 border rounded">
+                                        <input class="form-check-input" type="radio" name="payment_method" id="payme" value="payme" checked>
+                                        <label class="form-check-label" for="payme">
+                                            <i class="bi bi-credit-card-2-back text-primary me-2"></i>Payme
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2 p-3 border rounded">
+                                        <input class="form-check-input" type="radio" name="payment_method" id="click" value="click">
+                                        <label class="form-check-label" for="click">
+                                            <i class="bi bi-phone text-info me-2"></i>Click
+                                        </label>
+                                    </div>
+                                    <div class="form-check p-3 border rounded">
+                                        <input class="form-check-input" type="radio" name="payment_method" id="uzum" value="uzum">
+                                        <label class="form-check-label" for="uzum">
+                                            <i class="bi bi-bank text-success me-2"></i>Uzum Bank
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary w-100 btn-lg" onclick="return confirm('To\'lovni amalga oshirmoqchimisiz?')">
+                                    <i class="bi bi-lock me-2"></i>To'lash
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

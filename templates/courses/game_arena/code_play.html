@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% block title %}{{ challenge.title }} - Code Challenge{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a href="{% url 'code_challenge_list' %}" class="text-muted text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i>Masalalar
+            </a>
+            <h3 class="mt-1 mb-0">{{ challenge.title }}
+                <span class="badge {% if challenge.difficulty == 'easy' %}bg-success{% elif challenge.difficulty == 'medium' %}bg-warning{% else %}bg-danger{% endif %} ms-2" style="font-size: 0.5em;">
+                    {{ challenge.get_difficulty_display }}
+                </span>
+            </h3>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-info fs-6"><i class="bi bi-star me-1"></i>{{ challenge.xp_reward }} XP</span>
+            <div class="fs-4 fw-bold text-warning" id="timer">{{ challenge.time_limit }}s</div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Masala tavsifi -->
+        <div class="col-lg-5">
+            <div class="card p-4 h-100">
+                <h5 class="mb-3"><i class="bi bi-file-text me-2"></i>Masala</h5>
+                <div style="white-space: pre-wrap;">{{ challenge.description }}</div>
+
+                {% if challenge.test_cases %}
+                <hr>
+                <h6 class="mb-2"><i class="bi bi-check2-square me-1"></i>Namuna</h6>
+                {% for tc in challenge.test_cases %}
+                {% if forloop.counter <= 2 %}
+                <div class="mb-2 p-2 rounded" style="background: var(--card-bg); font-family: monospace; font-size: 0.85rem;">
+                    <div><strong>Input:</strong> {{ tc.input }}</div>
+                    <div><strong>Output:</strong> {{ tc.expected }}</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Kod editor -->
+        <div class="col-lg-7">
+            <div class="card p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="bi bi-code me-2"></i>Yechim</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary me-1" id="reset-btn">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                        </button>
+                        <button class="btn btn-sm btn-success" id="run-btn">
+                            <i class="bi bi-play-fill me-1"></i>Ishga tushirish
+                        </button>
+                    </div>
+                </div>
+                <textarea id="code-editor" class="form-control mb-3" rows="14"
+                          style="font-family: 'Courier New', monospace; font-size: 0.9rem; tab-size: 4;"
+                          spellcheck="false">{{ challenge.initial_code }}</textarea>
+
+                <!-- Natija -->
+                <div id="output-area" style="display: none;">
+                    <h6><i class="bi bi-terminal me-1"></i>Natija</h6>
+                    <div id="test-results" class="p-3 rounded" style="background: var(--card-bg); font-family: monospace; font-size: 0.85rem; max-height: 200px; overflow-y: auto;"></div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <button class="btn btn-primary btn-lg" id="submit-btn" style="display: none;">
+                        <i class="bi bi-check-lg me-1"></i>Javobni yuborish
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Natija modal -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <div class="mb-3" id="result-icon" style="font-size: 4rem;"></div>
+                <h3 class="mb-3" id="result-title"></h3>
+                <p class="mb-4" id="result-text"></p>
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <div class="p-3 rounded" style="background: var(--card-bg);">
+                            <div class="fs-4 fw-bold" id="result-tests">0/0</div>
+                            <div class="text-muted small">Testlar</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 rounded" style="background: var(--card-bg);">
+                            <div class="fs-4 fw-bold text-info" id="result-xp">+0 XP</div>
+                            <div class="text-muted small">XP</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{% url 'code_challenge_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-list me-1"></i>Masalalar
+                    </a>
+                    <a href="{% url 'game_arena' %}" class="btn btn-primary">
+                        <i class="bi bi-grid me-1"></i>Arena
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const testCases = {{ challenge.test_cases|safe }};
+    const challengeId = {{ challenge.pk }};
+    const timeLimit = {{ challenge.time_limit }};
+    const codeEditor = document.getElementById('code-editor');
+    const initialCode = codeEditor.value;
+    const timerEl = document.getElementById('timer');
+    const runBtn = document.getElementById('run-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const outputArea = document.getElementById('output-area');
+    const testResults = document.getElementById('test-results');
+
+    let timeLeft = timeLimit;
+    let timerInterval = null;
+    let started = false;
+    let passedTests = 0;
+
+    codeEditor.addEventListener('input', function() {
+        if (!started) {
+            started = true;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = timeLeft + 's';
+                if (timeLeft <= 10) timerEl.style.color = '#ef4444';
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    submitResult();
+                }
+            }, 1000);
+        }
+    });
+
+    // Tab support
+    codeEditor.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 4;
+        }
+    });
+
+    runBtn.addEventListener('click', function() {
+        const code = codeEditor.value;
+        outputArea.style.display = 'block';
+        testResults.innerHTML = '<div class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Tekshirilmoqda...</div>';
+        runBtn.disabled = true;
+
+        fetch("{% url 'code_challenge_run' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                challenge_id: challengeId,
+                code: code
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            runBtn.disabled = false;
+            let html = '';
+            passedTests = 0;
+
+            if (data.results) {
+                data.results.forEach(r => {
+                    if (r.passed) {
+                        passedTests++;
+                        html += `<div class="mb-1 text-success"><i class="bi bi-check-circle me-1"></i>Test ${r.index}: ✓ O'tdi</div>`;
+                    } else if (r.error) {
+                        html += `<div class="mb-1 text-danger"><i class="bi bi-x-circle me-1"></i>Test ${r.index}: ✗ Xato: ${r.error}</div>`;
+                    } else {
+                        html += `<div class="mb-1 text-danger"><i class="bi bi-x-circle me-1"></i>Test ${r.index}: ✗ Kutilgan: "${r.expected}", Natija: "${r.actual}"</div>`;
+                    }
+                });
+            }
+
+            html += `<hr><div class="fw-bold">${passedTests}/${testCases.length} test o'tdi</div>`;
+            testResults.innerHTML = html;
+            submitBtn.style.display = 'inline-block';
+        })
+        .catch(() => {
+            runBtn.disabled = false;
+            testResults.innerHTML = '<div class="text-danger">Server xatosi</div>';
+        });
+    });
+
+    resetBtn.addEventListener('click', function() {
+        codeEditor.value = initialCode;
+        outputArea.style.display = 'none';
+        submitBtn.style.display = 'none';
+    });
+
+    submitBtn.addEventListener('click', submitResult);
+
+    function submitResult() {
+        if (timerInterval) clearInterval(timerInterval);
+        const timeSpent = timeLimit - timeLeft;
+
+        fetch("{% url 'code_challenge_submit' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                challenge_id: challengeId,
+                code: codeEditor.value,
+                time_spent: timeSpent,
+                passed_tests: passedTests,
+                total_tests: testCases.length
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            const icon = data.all_passed ? '🎉' : '😔';
+            const title = data.all_passed ? 'Barakalla!' : 'Urinib ko\'ring';
+            const text = data.all_passed
+                ? `Barcha testlar o'tdi!`
+                : `${data.passed_tests}/${data.total_tests} test o'tdi`;
+
+            document.getElementById('result-icon').textContent = icon;
+            document.getElementById('result-title').textContent = title;
+            document.getElementById('result-text').textContent = text;
+            document.getElementById('result-tests').textContent = `${data.passed_tests}/${data.total_tests}`;
+            document.getElementById('result-xp').textContent = `+${data.xp_earned} XP`;
+            new bootstrap.Modal(document.getElementById('resultModal')).show();
+        });
+    }
+})();
+</script>
+{% endblock %}

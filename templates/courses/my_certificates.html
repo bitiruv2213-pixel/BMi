@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Sertifikatlarim{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="bi bi-award me-2"></i>Sertifikatlarim</h2>
+
+    {% if certificates %}
+    <div class="row">
+        {% for cert in certificates %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-4">
+                    <i class="bi bi-patch-check-fill text-success" style="font-size: 4rem;"></i>
+                    <h6 class="mt-3">{{ cert.course.title }}</h6>
+                    <p class="text-muted small">{{ cert.issued_at|date:"d.m.Y" }}</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'certificate_detail' cert.pk %}" class="btn btn-outline-primary btn-sm">Ko'rish</a>
+                        <a href="{% url 'certificate_download' cert.pk %}?theme=classic" class="btn btn-success btn-sm">
+                            <i class="bi bi-download me-1"></i>PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-award display-1 text-muted"></i>
+            <h5 class="text-muted mt-3">Hali sertifikatlar yo'q</h5>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ course.title }} - Statistika{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container { position: relative; height: 250px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'course_detail' course.slug %}">{{ course.title }}</a></li>
+        <li class="breadcrumb-item active">Statistika</li>
+    </ol>
+</nav>
+
+<h2 class="mb-4"><i class="bi bi-bar-chart me-2"></i>{{ course.title }} - Statistika</h2>
+
+<!-- Umumiy ko'rsatkichlar -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center py-3 bg-primary text-white">
+            <h2 class="mb-0">{{ total_students }}</h2>
+            <small>Jami talabalar</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3 bg-success text-white">
+            <h2 class="mb-0">{{ completed_students }}</h2>
+            <small>Yakunlaganlar</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3 bg-info text-white">
+            <h2 class="mb-0">{{ completion_rate|floatformat:1 }}%</h2>
+            <small>Yakunlash darajasi</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3 bg-warning text-dark">
+            <h2 class="mb-0">{{ avg_progress }}%</h2>
+            <small>O'rtacha progress</small>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Kunlik yozilishlar -->
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Kunlik yozilishlar (30 kun)</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="enrollmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Progress taqsimoti -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Progress taqsimoti</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dars bo'yicha progress -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>Darslar bo'yicha yakunlash</h6>
+    </div>
+    <div class="card-body">
+        <div class="chart-container">
+            <canvas id="lessonChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz statistikasi -->
+{% if quiz_stats %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-question-circle me-2"></i>Quiz statistikasi</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Quiz</th>
+                    <th>Urinishlar</th>
+                    <th>O'rtacha ball</th>
+                    <th>O'tish darajasi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in quiz_stats %}
+                <tr>
+                    <td>{{ stat.quiz.title }}</td>
+                    <td>{{ stat.attempts }}</td>
+                    <td>{{ stat.avg_score|floatformat:1 }}%</td>
+                    <td>
+                        <div class="progress" style="width: 150px;">
+                            <div class="progress-bar bg-success" style="width: {{ stat.pass_rate }}%"></div>
+                        </div>
+                        <small>{{ stat.pass_rate|floatformat:1 }}%</small>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Talabalar ro'yxati -->
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-people me-2"></i>Talabalar ({{ total_students }})</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Talaba</th>
+                    <th>Progress</th>
+                    <th>Status</th>
+                    <th>Yozilgan sana</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for enrollment in students %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ enrollment.student.get_full_name }}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                <div class="progress-bar" style="width: {{ enrollment.progress }}%"></div>
+                            </div>
+                            <small>{{ enrollment.progress }}%</small>
+                        </div>
+                    </td>
+                    <td>
+                        {% if enrollment.completed %}
+                            <span class="badge bg-success">Yakunlagan</span>
+                        {% else %}
+                            <span class="badge bg-warning">Davom etmoqda</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ enrollment.enrolled_at|date:"d.m.Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const enrollmentData = {{ daily_enrollments|safe }};
+const lessonData = {{ lesson_stats|safe }};
+const progressData = {{ progress_distribution|safe }};
+
+// Kunlik yozilishlar
+new Chart(document.getElementById('enrollmentChart'), {
+    type: 'line',
+    data: {
+        labels: enrollmentData.map(d => d.date),
+        datasets: [{
+            label: 'Yozilishlar',
+            data: enrollmentData.map(d => d.count),
+            borderColor: '#4f46e5',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+
+// Progress taqsimoti
+new Chart(document.getElementById('progressChart'), {
+    type: 'doughnut',
+    data: {
+        labels: Object.keys(progressData),
+        datasets: [{
+            data: Object.values(progressData),
+            backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981']
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+
+// Dars bo'yicha
+new Chart(document.getElementById('lessonChart'), {
+    type: 'bar',
+    data: {
+        labels: lessonData.map(d => d.title),
+        datasets: [{
+            label: 'Yakunlangan %',
+            data: lessonData.map(d => d.rate),
+            backgroundColor: '#4f46e5',
+            borderRadius: 8
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+});
+</script>
+{% endblock %}

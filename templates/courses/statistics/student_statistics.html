@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}Mening statistikam - LMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container { position: relative; height: 250px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-lines-fill me-2"></i>Mening statistikam</h2>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Dashboard
+    </a>
+</div>
+
+<!-- Umumiy ko'rsatkichlar -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center py-4 bg-primary text-white">
+            <h2 class="mb-0">{{ total_courses }}</h2>
+            <small>Kurslarim</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-4 bg-success text-white">
+            <h2 class="mb-0">{{ completed_courses }}</h2>
+            <small>Yakunlangan</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-4 bg-warning text-dark">
+            <h2 class="mb-0">{{ avg_progress }}%</h2>
+            <small>O'rtacha progress</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-4 bg-info text-white">
+            <h2 class="mb-0">{{ certificates }}</h2>
+            <small>Sertifikatlar</small>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz statistikasi -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Quiz natijalari</h6>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="text-primary">{{ passed_quizzes }}/{{ total_quizzes }}</h1>
+                <p class="text-muted">Muvaffaqiyatli testlar</p>
+                <div class="progress mb-3" style="height: 15px;">
+                    <div class="progress-bar bg-success" style="width: {{ pass_rate }}%">{{ pass_rate|floatformat:0 }}%</div>
+                </div>
+                <p class="mb-0">O'rtacha ball: <strong class="text-primary">{{ avg_score }}%</strong></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Kunlik aktivlik (30 kun)</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Kurs bo'yicha progress -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-book me-2"></i>Kurslar bo'yicha progress</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="courseChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quiz ball taqsimoti -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Quiz ball taqsimoti</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="scoreChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz tarixi -->
+{% if quiz_history %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>So'nggi quiz natijalari</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Quiz</th>
+                    <th>Ball</th>
+                    <th>Natija</th>
+                    <th>Vaqt</th>
+                    <th>Sana</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for attempt in quiz_history %}
+                <tr>
+                    <td>{{ attempt.quiz.title }}</td>
+                    <td><strong>{{ attempt.score|floatformat:0 }}%</strong></td>
+                    <td>
+                        {% if attempt.passed %}
+                            <span class="badge bg-success">O'tdi</span>
+                        {% else %}
+                            <span class="badge bg-danger">O'tmadi</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ attempt.time_spent|floatformat:0 }} sek</td>
+                    <td>{{ attempt.completed_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Kurslarim -->
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-collection me-2"></i>Barcha kurslarim</h6>
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for enrollment in enrollments %}
+        <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{ enrollment.course.title }}</strong>
+                    <br>
+                    <small class="text-muted">{{ enrollment.course.teacher.get_full_name }}</small>
+                </div>
+                <div class="text-end">
+                    <div class="progress mb-1" style="width: 150px; height: 8px;">
+                        <div class="progress-bar {% if enrollment.completed %}bg-success{% endif %}" style="width: {{ enrollment.progress }}%"></div>
+                    </div>
+                    <small>{{ enrollment.progress }}%</small>
+                    {% if enrollment.completed %}
+                        <span class="badge bg-success ms-2">Yakunlangan</span>
+                    {% endif %}
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const activityData = {{ daily_activity|safe }};
+const courseData = {{ course_progress|safe }};
+const scoreData = {{ score_distribution|safe }};
+
+// Aktivlik grafigi
+new Chart(document.getElementById('activityChart'), {
+    type: 'line',
+    data: {
+        labels: activityData.map(d => d.date),
+        datasets: [{
+            label: 'Yakunlangan darslar',
+            data: activityData.map(d => d.count),
+            borderColor: '#4f46e5',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+
+// Kurs progress
+new Chart(document.getElementById('courseChart'), {
+    type: 'bar',
+    data: {
+        labels: courseData.map(d => d.name),
+        datasets: [{
+            label: 'Progress %',
+            data: courseData.map(d => d.progress),
+            backgroundColor: '#4f46e5',
+            borderRadius: 8
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+});
+
+// Score taqsimoti
+new Chart(document.getElementById('scoreChart'), {
+    type: 'doughnut',
+    data: {
+        labels: Object.keys(scoreData),
+        datasets: [{
+            data: Object.values(scoreData),
+            backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981']
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+</script>
+{% endblock %}

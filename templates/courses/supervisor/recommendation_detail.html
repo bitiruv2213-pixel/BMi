@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tahlil Batafsil - {{ submission.student.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">
+                <i class="bi bi-bar-chart me-2 text-primary"></i>Baho Tahlili
+            </h2>
+            <p class="text-muted mb-0">{{ assignment.title }}</p>
+        </div>
+        <a href="{% url 'supervisor_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Orqaga
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left: Comparison -->
+        <div class="col-lg-8">
+            <!-- Student Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="fw-bold mb-1">{{ submission.student.get_full_name }}</h5>
+                            <p class="text-muted mb-0">@{{ submission.student.username }}</p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <small class="text-muted">Yuborilgan: {{ submission.submitted_at|date:"d M Y, H:i" }}</small>
+                            <br>
+                            <small class="text-muted">Baholangan: {{ recommendation.reviewed_at|date:"d M Y, H:i" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Score Comparison -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Baho Taqqoslash
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4 text-center">
+                        <div class="col-md-4">
+                            <div class="p-4 rounded" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                                <i class="bi bi-robot text-white mb-2" style="font-size: 2rem;"></i>
+                                <div class="display-4 fw-bold text-white">{{ recommendation.ai_score }}</div>
+                                <div class="text-white opacity-75">AI Tavsiya</div>
+                                <div class="mt-2">
+                                    <small class="badge bg-white text-dark">Ishonch: {{ recommendation.confidence|floatformat:0 }}%</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-4 rounded" style="background: linear-gradient(135deg, #10b981, #059669);">
+                                <i class="bi bi-person-check text-white mb-2" style="font-size: 2rem;"></i>
+                                <div class="display-4 fw-bold text-white">{{ recommendation.teacher_score }}</div>
+                                <div class="text-white opacity-75">O'qituvchi Baho</div>
+                                <div class="mt-2">
+                                    <small class="badge bg-white text-dark">{{ assignment.lesson.course.teacher.get_full_name }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-4 rounded {% if recommendation.score_difference >= 20 %}bg-danger{% elif recommendation.score_difference >= 10 %}bg-warning{% else %}bg-success{% endif %} text-white">
+                                <i class="bi bi-arrow-left-right mb-2" style="font-size: 2rem;"></i>
+                                <div class="display-4 fw-bold">{{ recommendation.score_difference }}</div>
+                                <div class="opacity-75">Farq</div>
+                                <div class="mt-2">
+                                    <small class="badge bg-white text-dark">Max: {{ recommendation.max_score }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submission Content -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-text me-2"></i>Topshiriq Javobi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if submission.file_response %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-file-earmark me-2"></i>
+                        <a href="{{ submission.file_response.url }}" target="_blank" class="alert-link">
+                            Yuklangan fayl
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if submission.text_response %}
+                    <div class="border rounded p-3" style="background: var(--bg-secondary); max-height: 400px; overflow-y: auto;">
+                        <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ submission.text_response }}</pre>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Matn javobi yo'q</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: AI Analysis & Teacher Feedback -->
+        <div class="col-lg-4">
+            <!-- AI Analysis -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                    <h6 class="mb-0">
+                        <i class="bi bi-robot me-2"></i>AI Tahlili
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong class="d-block mb-2">
+                            <i class="bi bi-chat-left-text text-primary me-1"></i>Tahlil:
+                        </strong>
+                        <p class="small">{{ recommendation.analysis }}</p>
+                    </div>
+                    
+                    {% if recommendation.strengths %}
+                    <div class="mb-3">
+                        <strong class="d-block mb-2 text-success">
+                            <i class="bi bi-check-circle me-1"></i>Kuchli tomonlar:
+                        </strong>
+                        <div class="small">{{ recommendation.strengths|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if recommendation.weaknesses %}
+                    <div class="mb-3">
+                        <strong class="d-block mb-2 text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Zaif tomonlar:
+                        </strong>
+                        <div class="small">{{ recommendation.weaknesses|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if recommendation.suggestions %}
+                    <div>
+                        <strong class="d-block mb-2 text-info">
+                            <i class="bi bi-lightbulb me-1"></i>Takliflar:
+                        </strong>
+                        <div class="small">{{ recommendation.suggestions|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Teacher Feedback -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white py-3">
+                    <h6 class="mb-0">
+                        <i class="bi bi-person-check me-2"></i>O'qituvchi Izohi
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if recommendation.teacher_feedback %}
+                    <p class="small mb-0">{{ recommendation.teacher_feedback|linebreaks }}</p>
+                    {% else %}
+                    <p class="text-muted small mb-0">Izoh qoldirilmagan</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

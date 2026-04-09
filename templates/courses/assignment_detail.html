@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ assignment.title }} - Topshiriq holati{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>{{ assignment.title }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">{{ assignment.description }}</p>
+                    <p class="mb-0"><strong>Maksimal ball:</strong> {{ assignment.max_score }}</p>
+                </div>
+            </div>
+
+            {% if submission %}
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-check-circle me-2 text-success"></i>Yuborilgan javob</h6>
+                    <span class="badge bg-success">{{ submission.submitted_at|date:"d.m.Y H:i" }}</span>
+                </div>
+                <div class="card-body">
+                    {% if submission.content %}
+                    <p class="mb-3">{{ submission.content|linebreaks }}</p>
+                    {% endif %}
+                    {% if submission.file %}
+                    <a href="{{ submission.file.url }}" class="btn btn-outline-primary" target="_blank">
+                        <i class="bi bi-download me-2"></i>Yuklangan faylni ko'rish
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if submission.is_graded %}
+            <!-- O'qituvchi bahosi -->
+            <div class="card mb-4 border-success">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="bi bi-person-check-fill me-2"></i>O'qituvchi bahosi
+                    </h6>
+                    {% if submission.graded_at %}
+                    <small>{{ submission.graded_at|date:"d M Y, H:i" }}</small>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center mb-3">
+                        <div class="col-auto">
+                            <div class="text-center">
+                                <div class="display-4 fw-bold text-success">{{ submission.score }}</div>
+                                <div class="text-muted small">/ {{ assignment.max_score }} ball</div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="progress" style="height: 12px; border-radius: 8px;">
+                                <div class="progress-bar bg-success" style="width: {% widthratio submission.score assignment.max_score 100 %}%; border-radius: 8px;"></div>
+                            </div>
+                            <small class="text-muted mt-1 d-block">
+                                {% widthratio submission.score assignment.max_score 100 %}%
+                            </small>
+                        </div>
+                    </div>
+
+                    {% if submission.feedback %}
+                    <hr>
+                    <div>
+                        <strong class="d-block mb-2">
+                            <i class="bi bi-chat-square-text me-1 text-primary"></i>O'qituvchi izohi:
+                        </strong>
+                        <div class="p-3 rounded border" style="background: var(--bs-light, #f8f9fa);">
+                            {{ submission.feedback|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if ai_recommendation %}
+            <!-- AI tahlili -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-robot me-2 text-info"></i>AI tavsiya tahlili</h6>
+                    <span class="badge bg-info">{{ ai_recommendation.ai_score }}/{{ ai_recommendation.max_score }}</span>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">{{ ai_recommendation.analysis }}</p>
+                    {% if ai_recommendation.strengths %}
+                    <div class="mb-2">
+                        <strong class="text-success"><i class="bi bi-check-circle me-1"></i>Kuchli tomonlar:</strong>
+                        <div class="small mt-1">{{ ai_recommendation.strengths|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ai_recommendation.weaknesses %}
+                    <div class="mb-2">
+                        <strong class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Zaif tomonlar:</strong>
+                        <div class="small mt-1">{{ ai_recommendation.weaknesses|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ai_recommendation.suggestions %}
+                    <div class="mb-0">
+                        <strong class="text-info"><i class="bi bi-lightbulb me-1"></i>Takliflar:</strong>
+                        <div class="small mt-1">{{ ai_recommendation.suggestions|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if not submission.is_graded %}
+            <div class="alert alert-info d-flex align-items-center mb-4">
+                <i class="bi bi-hourglass-split me-2 fs-5"></i>
+                <div>Topshiriqingiz o'qituvchi tomonidan baholanishi kutilmoqda.</div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-exclamation-circle text-warning fs-1 mb-3 d-block"></i>
+                    <p class="mb-3">Bu topshiriq hali yuborilmagan.</p>
+                    <a href="{% url 'assignment_submit' assignment.pk %}" class="btn btn-primary">
+                        <i class="bi bi-upload me-2"></i>Topshiriqni yuborish
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <a href="{% url 'course_learn' assignment.lesson.course.slug %}?lesson={{ assignment.lesson.id }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Mavzuga qaytish
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

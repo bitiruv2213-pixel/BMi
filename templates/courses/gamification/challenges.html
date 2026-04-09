@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}Kunlik vazifalar - LMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .challenge-card {
+        border-radius: 15px;
+        transition: all 0.3s;
+        border-left: 5px solid #4f46e5;
+    }
+    .challenge-card:hover {
+        transform: translateY(-3px);
+    }
+    .challenge-card.completed {
+        border-left-color: #10b981;
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    }
+    .challenge-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    .xp-reward {
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-calendar-check me-2"></i>Kunlik vazifalar</h2>
+    <a href="{% url 'gamification_profile' %}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left me-2"></i>Orqaga
+    </a>
+</div>
+
+<!-- Streak info -->
+<div class="card mb-4" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%); color: white; border-radius: 15px;">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div style="font-size: 4rem;">🔥</div>
+            </div>
+            <div class="col">
+                <h3 class="mb-1">{{ xp_profile.current_streak }} kunlik streak!</h3>
+                <p class="mb-0 opacity-75">Eng uzun streak: {{ xp_profile.longest_streak }} kun</p>
+            </div>
+            <div class="col-auto">
+                <p class="mb-0 opacity-75">Har kuni o'qing va streak'ni saqlang!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vazifalar -->
+<div class="row g-4">
+    {% for uc in user_challenges %}
+    <div class="col-md-6">
+        <div class="card challenge-card h-100 {% if uc.completed %}completed{% endif %}">
+            <div class="card-body">
+                <div class="d-flex align-items-start">
+                    <div class="challenge-icon bg-{% if uc.challenge.challenge_type == 'lesson' %}primary{% elif uc.challenge.challenge_type == 'quiz' %}success{% elif uc.challenge.challenge_type == 'streak' %}danger{% else %}info{% endif %} text-white me-3">
+                        {% if uc.challenge.challenge_type == 'lesson' %}
+                            <i class="bi bi-book"></i>
+                        {% elif uc.challenge.challenge_type == 'quiz' %}
+                            <i class="bi bi-question-circle"></i>
+                        {% elif uc.challenge.challenge_type == 'streak' %}
+                            <i class="bi bi-fire"></i>
+                        {% else %}
+                            <i class="bi bi-chat-dots"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="mb-0">{{ uc.challenge.title }}</h5>
+                            {% if uc.completed %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Bajarildi</span>
+                            {% else %}
+                                <span class="xp-reward">+{{ uc.challenge.xp_reward }} XP</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted mb-3">{{ uc.challenge.description }}</p>
+                        
+                        <div class="progress mb-2" style="height: 10px; border-radius: 5px;">
+                            <div class="progress-bar bg-{% if uc.completed %}success{% else %}primary{% endif %}" 
+                                 style="width: {% widthratio uc.progress uc.challenge.target_count 100 %}%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">{{ uc.progress }} / {{ uc.challenge.target_count }}</small>
+                            {% if uc.completed %}
+                                <small class="text-success"><i class="bi bi-check-lg me-1"></i>{{ uc.completed_at|date:"H:i" }} da yakunlandi</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-calendar-x" style="font-size: 4rem; color: #ccc;"></i>
+                <h4 class="mt-3 text-muted">Bugun uchun vazifalar yo'q</h4>
+                <p class="text-muted">Ertaga qayta tekshiring!</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

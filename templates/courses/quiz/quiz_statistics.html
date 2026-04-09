@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Statistika - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'quiz_detail' quiz.pk %}">{{ quiz.title }}</a></li>
+        <li class="breadcrumb-item active">Statistika</li>
+    </ol>
+</nav>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h2>{{ stats.total_attempts }}</h2>
+                <small>Jami urinishlar</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h2>{{ stats.avg_score|floatformat:1 }}%</h2>
+                <small>O'rtacha ball</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h2>{{ stats.pass_rate|floatformat:1 }}%</h2>
+                <small>O'tish foizi</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h2>{{ stats.avg_time|floatformat:0 }}s</h2>
+                <small>O'rtacha vaqt</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Savollar bo'yicha statistika</h5>
+            </div>
+            <div class="card-body">
+                {% for qs in question_stats %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>{{ forloop.counter }}. {{ qs.question.text|truncatewords:10 }}</span>
+                        <span>{{ qs.rate|floatformat:0 }}%</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar {% if qs.rate >= 70 %}bg-success{% elif qs.rate >= 40 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             style="width: {{ qs.rate }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ qs.correct }}/{{ qs.total }} to'g'ri</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-people me-2"></i>So'nggi urinishlar</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Talaba</th>
+                            <th>Ball</th>
+                            <th>Holat</th>
+                            <th>Sana</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attempt in attempts %}
+                        <tr>
+                            <td>{{ attempt.student.get_full_name }}</td>
+                            <td>{{ attempt.score }}%</td>
+                            <td>
+                                {% if attempt.passed %}
+                                    <span class="badge bg-success">O'tdi</span>
+                                {% else %}
+                                    <span class="badge bg-danger">O'tmadi</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ attempt.completed_at|date:"d.m.Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

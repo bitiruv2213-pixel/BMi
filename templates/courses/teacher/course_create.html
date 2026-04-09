@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Yangi kurs{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Yangi kurs yaratish</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Kurs nomi *</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}<small class="text-danger">{{ form.title.errors|join:", " }}</small>{% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Tavsif *</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<small class="text-danger">{{ form.description.errors|join:", " }}</small>{% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Kategoriya</label>
+                                {{ form.category }}
+                                {% if form.category.errors %}<small class="text-danger">{{ form.category.errors|join:", " }}</small>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Daraja</label>
+                                {{ form.level }}
+                                {% if form.level.errors %}<small class="text-danger">{{ form.level.errors|join:", " }}</small>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Til *</label>
+                            {{ form.language }}
+                            {% if form.language.errors %}<small class="text-danger">{{ form.language.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Qisqa tavsif</label>
+                            {{ form.short_description }}
+                            {% if form.short_description.errors %}<small class="text-danger">{{ form.short_description.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Narx</label>
+                                {{ form.price }}
+                                {% if form.price.errors %}<small class="text-danger">{{ form.price.errors|join:", " }}</small>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Chegirmali narx</label>
+                                {{ form.discount_price }}
+                                {% if form.discount_price.errors %}<small class="text-danger">{{ form.discount_price.errors|join:", " }}</small>{% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Rasm</label>
+                            {{ form.thumbnail }}
+                            {% if form.thumbnail.errors %}<small class="text-danger">{{ form.thumbnail.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Talablar</label>
+                            {{ form.requirements }}
+                            {% if form.requirements.errors %}<small class="text-danger">{{ form.requirements.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nimalarni o'rganadi</label>
+                            {{ form.what_you_learn }}
+                            {% if form.what_you_learn.errors %}<small class="text-danger">{{ form.what_you_learn.errors|join:", " }}</small>{% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            {{ form.is_free }} <label>Bepul</label>
+                            {{ form.is_published }} <label class="ms-3">Nashr qilish</label>
+                            {{ form.is_featured }} <label class="ms-3">Tavsiya etilgan</label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check-lg me-2"></i>Yaratish</button>
+                        <a href="{% url 'teacher_courses' %}" class="btn btn-outline-secondary btn-lg">Bekor</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

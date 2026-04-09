@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% block title %}Kurslar - LMS Platform{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-6">
+                <h1 class="mb-2">
+                    <i class="bi bi-collection-play me-2 text-gradient"></i>Barcha Kurslar
+                </h1>
+                <p class="text-muted mb-0">{{ courses.count|default:courses|length }} ta kurs topildi</p>
+            </div>
+            <div class="col-lg-6">
+                <!-- Search -->
+                <form action="" method="get">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-transparent border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-start-0 ps-0"
+                               placeholder="Kurs qidirish..." value="{{ request.GET.search }}">
+                        <button type="submit" class="btn btn-primary px-4">
+                            Qidirish
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3">
+            <div class="card sticky-top" style="top: 100px;">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filterlar</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Categories -->
+                    <h6 class="small fw-bold text-uppercase text-muted mb-3">Kategoriyalar</h6>
+                    <div class="list-group list-group-flush mb-4">
+                        <a href="{% url 'course_list' %}"
+                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0 border-0 {% if not request.GET.category %}active{% endif %}">
+                            Barchasi
+                            <span class="badge bg-primary rounded-pill">{{ total_courses }}</span>
+                        </a>
+                        {% for category in categories %}
+                        <a href="?category={{ category.slug }}{% if request.GET.level %}&level={{ request.GET.level }}{% endif %}{% if request.GET.free %}&free={{ request.GET.free }}{% endif %}"
+                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0 border-0 {% if request.GET.category == category.slug %}active{% endif %}">
+                            {{ category.name }}
+                            <span class="badge bg-secondary rounded-pill">{{ category.course_count }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Level -->
+                    <h6 class="small fw-bold text-uppercase text-muted mb-3">Daraja</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        <a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.free %}free={{ request.GET.free }}{% endif %}"
+                           class="btn btn-sm {% if not request.GET.level %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Barchasi
+                        </a>
+                        <a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}level=beginner{% if request.GET.free %}&free={{ request.GET.free }}{% endif %}"
+                           class="btn btn-sm {% if request.GET.level == 'beginner' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Boshlang'ich
+                        </a>
+                        <a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}level=intermediate{% if request.GET.free %}&free={{ request.GET.free }}{% endif %}"
+                           class="btn btn-sm {% if request.GET.level == 'intermediate' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            O'rta
+                        </a>
+                        <a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}level=advanced{% if request.GET.free %}&free={{ request.GET.free }}{% endif %}"
+                           class="btn btn-sm {% if request.GET.level == 'advanced' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Yuqori
+                        </a>
+                    </div>
+
+                    <!-- Price -->
+                    <h6 class="small fw-bold text-uppercase text-muted mb-3">Narx</h6>
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="freeOnly"
+                               {% if request.GET.free == 'true' %}checked{% endif %}
+                               onchange="toggleFree(this.checked)">
+                        <label class="form-check-label" for="freeOnly">
+                            <i class="bi bi-gift me-1 text-success"></i>Faqat bepul kurslar
+                        </label>
+                    </div>
+
+                    <!-- Clear Filters -->
+                    {% if request.GET %}
+                    <a href="{% url 'course_list' %}" class="btn btn-outline-danger btn-sm w-100">
+                        <i class="bi bi-x-circle me-1"></i>Filterlarni tozalash
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Courses Grid -->
+        <div class="col-lg-9">
+            <!-- Sort Options -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <span class="text-muted d-none d-md-inline">
+                    <strong>{{ courses|length }}</strong> ta kurs
+                </span>
+                <select class="form-select form-select-sm" style="width: auto;" onchange="sortCourses(this.value)">
+                    <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Eng yangi</option>
+                    <option value="popular" {% if request.GET.sort == 'popular' %}selected{% endif %}>Mashhur</option>
+                    <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>Reyting bo'yicha</option>
+                    <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Narx: past → yuqori</option>
+                    <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Narx: yuqori → past</option>
+                </select>
+            </div>
+
+            <div class="row g-4">
+                {% for course in courses %}
+                <div class="col-md-6 col-xl-4">
+                    <div class="card card-course h-100">
+                        <!-- Thumbnail -->
+                        <div class="position-relative overflow-hidden">
+                            {% if course.thumbnail %}
+                            <img src="{{ course.thumbnail.url }}" class="card-img-top" alt="{{ course.title }}"
+                                 style="height: 180px; object-fit: cover; transition: transform 0.3s;">
+                            {% else %}
+                            <div class="card-img-top d-flex align-items-center justify-content-center"
+                                 style="height: 180px; background: var(--accent-gradient);">
+                                <i class="bi bi-play-circle text-white" style="font-size: 3.5rem;"></i>
+                            </div>
+                            {% endif %}
+
+                            <!-- Badges -->
+                            <div class="position-absolute top-0 start-0 m-3 d-flex flex-column gap-2">
+                                {% if course.is_free %}
+                                <span class="badge bg-success"><i class="bi bi-gift me-1"></i>Bepul</span>
+                                {% elif course.discount_price %}
+                                <span class="badge bg-danger"><i class="bi bi-tag me-1"></i>Chegirma</span>
+                                {% endif %}
+                            </div>
+
+                            {% if course.is_featured %}
+                            <div class="position-absolute top-0 end-0 m-3">
+                                <span class="badge bg-warning text-dark"><i class="bi bi-star-fill me-1"></i>Tavsiya</span>
+                            </div>
+                            {% endif %}
+
+                            <!-- Level Badge -->
+                            <div class="position-absolute bottom-0 start-0 m-3">
+                                <span class="badge
+                                    {% if course.level == 'beginner' %}bg-success
+                                    {% elif course.level == 'intermediate' %}bg-warning text-dark
+                                    {% else %}bg-danger{% endif %}">
+                                    {% if course.level == 'beginner' %}Boshlang'ich
+                                    {% elif course.level == 'intermediate' %}O'rta
+                                    {% else %}Yuqori{% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <!-- Category -->
+                            {% if course.category %}
+                            <a href="?category={{ course.category.slug }}" class="text-decoration-none">
+                                <small class="text-primary fw-semibold">{{ course.category.name }}</small>
+                            </a>
+                            {% endif %}
+
+                            <!-- Title -->
+                            <h6 class="card-title mt-2 mb-3">
+                                <a href="{% url 'course_detail' course.slug %}" class="text-decoration-none stretched-link">
+                                    {{ course.title|truncatewords:8 }}
+                                </a>
+                            </h6>
+
+                            <!-- Teacher -->
+                            <div class="d-flex align-items-center mb-3">
+                                {% if course.teacher.profile.avatar %}
+                                <img src="{{ course.teacher.profile.avatar.url }}" class="avatar avatar-sm me-2"
+                                     style="object-fit: cover;">
+                                {% else %}
+                                <div class="avatar avatar-sm me-2">
+                                    {{ course.teacher.first_name|first|default:course.teacher.username|first }}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">{{ course.teacher.get_full_name|default:course.teacher.username }}</small>
+                            </div>
+
+                            <!-- Rating -->
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning me-2">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= course.average_rating %}
+                                        <i class="bi bi-star-fill"></i>
+                                        {% else %}
+                                        <i class="bi bi-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">({{ course.total_reviews }})</small>
+                            </div>
+
+                            <!-- Stats -->
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span><i class="bi bi-play-circle me-1"></i>{{ course.total_lessons }} dars</span>
+                                <span><i class="bi bi-people me-1"></i>{{ course.total_students }}</span>
+                            </div>
+                        </div>
+
+                        <div class="card-footer bg-transparent pt-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <!-- Price -->
+                                <div>
+                                    {% if course.is_free %}
+                                    <span class="h5 mb-0 text-success fw-bold">Bepul</span>
+                                    {% elif course.discount_price %}
+                                    <small class="text-decoration-line-through text-muted">{{ course.price|floatformat:0 }}</small>
+                                    <span class="h5 mb-0 ms-1 text-danger fw-bold">{{ course.discount_price|floatformat:0 }}</span>
+                                    {% else %}
+                                    <span class="h5 mb-0 fw-bold">{{ course.price|floatformat:0 }} <small>so'm</small></span>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Button -->
+                                <a href="{% url 'course_detail' course.slug %}" class="btn btn-primary btn-sm z-1">
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-search display-1 text-muted mb-4"></i>
+                            <h4>Kurslar topilmadi</h4>
+                            <p class="text-muted mb-4">Boshqa filter yoki qidiruv so'zini sinab ko'ring</p>
+                            <a href="{% url 'course_list' %}" class="btn btn-primary">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Barchasini ko'rish
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if courses.has_other_pages %}
+            <nav class="mt-5">
+                <ul class="pagination justify-content-center">
+                    {% if courses.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ courses.previous_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.level %}&level={{ request.GET.level }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in courses.paginator.page_range %}
+                    {% if courses.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > courses.number|add:'-3' and num < courses.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.level %}&level={{ request.GET.level }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if courses.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ courses.next_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.level %}&level={{ request.GET.level }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleFree(checked) {
+    const url = new URL(window.location.href);
+    if (checked) {
+        url.searchParams.set('free', 'true');
+    } else {
+        url.searchParams.delete('free');
+    }
+    window.location.href = url.toString();
+}
+
+function sortCourses(value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('sort', value);
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}

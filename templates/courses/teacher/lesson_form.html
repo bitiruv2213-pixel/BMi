@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}{% if action == 'create' %}Yangi dars{% else %}Darsni tahrirlash{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h4 class="mb-0">{% if action == 'create' %}<i class="bi bi-plus-circle me-2"></i>Yangi dars{% else %}<i class="bi bi-pencil me-2"></i>Darsni tahrirlash{% endif %}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Dars nomi *</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}<small class="text-danger">{{ form.title.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dars haqida</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<small class="text-danger">{{ form.description.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Kontent</label>
+                            {{ form.content }}
+                            {% if form.content.errors %}<small class="text-danger">{{ form.content.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dars turi</label>
+                            {{ form.lesson_type }}
+                            {% if form.lesson_type.errors %}<small class="text-danger">{{ form.lesson_type.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Video URL</label>
+                                {{ form.video_url }}
+                                {% if form.video_url.errors %}<small class="text-danger">{{ form.video_url.errors|join:", " }}</small>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Video fayl</label>
+                                {{ form.video_file }}
+                                {% if form.video_file.errors %}<small class="text-danger">{{ form.video_file.errors|join:", " }}</small>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Davomiyligi (daqiqa)</label>
+                                {{ form.duration }}
+                                {% if form.duration.errors %}<small class="text-danger">{{ form.duration.errors|join:", " }}</small>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tartib (order)</label>
+                                {{ form.order }}
+                                {% if form.order.errors %}<small class="text-danger">{{ form.order.errors|join:", " }}</small>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">XP mukofoti</label>
+                                {{ form.xp_reward }}
+                                {% if form.xp_reward.errors %}<small class="text-danger">{{ form.xp_reward.errors|join:", " }}</small>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Qo'shimcha fayl (attachment)</label>
+                            {{ form.attachment }}
+                            {% if form.attachment.errors %}<small class="text-danger">{{ form.attachment.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.is_published }} <label>Nashr qilish</label>
+                            {{ form.is_free }} <label class="ms-3">Bepul ko'rish</label>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Mavzu topshirig'i (ixtiyoriy)</h5>
+                        {% if assignment_form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for err in assignment_form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label">Topshiriq nomi</label>
+                            {{ assignment_form.title }}
+                            {% if assignment_form.title.errors %}<small class="text-danger">{{ assignment_form.title.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Topshiriq tavsifi</label>
+                            {{ assignment_form.description }}
+                            {% if assignment_form.description.errors %}<small class="text-danger">{{ assignment_form.description.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Ko'rsatmalar</label>
+                            {{ assignment_form.instructions }}
+                            {% if assignment_form.instructions.errors %}<small class="text-danger">{{ assignment_form.instructions.errors|join:", " }}</small>{% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Maksimal ball</label>
+                                {{ assignment_form.max_score }}
+                                {% if assignment_form.max_score.errors %}<small class="text-danger">{{ assignment_form.max_score.errors|join:", " }}</small>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Topshirish kuni (due_days)</label>
+                                {{ assignment_form.due_days }}
+                                {% if assignment_form.due_days.errors %}<small class="text-danger">{{ assignment_form.due_days.errors|join:", " }}</small>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Topshiriq fayli</label>
+                            {{ assignment_form.attachment }}
+                            {% if assignment_form.attachment.errors %}<small class="text-danger">{{ assignment_form.attachment.errors|join:", " }}</small>{% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-2"></i>Saqlash</button>
+                        <a href="{% url 'teacher_course_edit' course.slug %}" class="btn btn-outline-secondary">Bekor</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

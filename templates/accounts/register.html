@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load socialaccount %}
+
+{% block title %}Ro'yxatdan o'tish - LMS Platform{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center py-5" style="background: var(--bg-secondary);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10 col-xl-9">
+                <div class="card border-0 shadow-lg overflow-hidden">
+                    <div class="row g-0">
+                        <!-- Left Side - Decorative -->
+                        <div class="col-lg-5 d-none d-lg-flex align-items-center justify-content-center p-5"
+                             style="background: var(--accent-gradient); position: relative; overflow: hidden;">
+                            <!-- Animated Background -->
+                            <div class="position-absolute" style="top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 50px 50px; animation: backgroundMove 20s linear infinite;"></div>
+
+                            <div class="text-center text-white position-relative">
+                                <div class="mb-4" style="animation: float 3s ease-in-out infinite;">
+                                    <i class="bi bi-person-plus-fill" style="font-size: 6rem; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));"></i>
+                                </div>
+                                <h3 class="fw-bold mb-3">Bizga qo'shiling!</h3>
+                                <p class="opacity-90 mb-4">
+                                    Minglab talabalar bilan birga o'qing va rivojlaning
+                                </p>
+
+                                <!-- Benefits -->
+                                <div class="text-start">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <i class="bi bi-check-circle-fill me-3 fs-4"></i>
+                                        <div>
+                                            <strong>50+ Professional kurslar</strong>
+                                            <div class="small opacity-75">Turli yo'nalishlarda</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <i class="bi bi-check-circle-fill me-3 fs-4"></i>
+                                        <div>
+                                            <strong>Rasmiy sertifikatlar</strong>
+                                            <div class="small opacity-75">Har bir kurs uchun</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-check-circle-fill me-3 fs-4"></i>
+                                        <div>
+                                            <strong>AI Mentor 24/7</strong>
+                                            <div class="small opacity-75">Doimiy yordam</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Side - Form -->
+                        <div class="col-lg-7">
+                            <div class="card-body p-4 p-lg-5">
+                                <!-- Header -->
+                                <div class="text-center mb-4">
+                                    <h2 class="fw-bold mb-2">Ro'yxatdan o'tish</h2>
+                                    <p class="text-muted">Yangi hisob yarating va o'qishni boshlang</p>
+                                </div>
+
+                                <!-- Form Errors -->
+                                {% if form.non_field_errors %}
+                                <div class="alert alert-danger d-flex align-items-start" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+                                    <div>
+                                        {% for error in form.non_field_errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <form method="post" novalidate>
+                                    {% csrf_token %}
+
+                                    <!-- Name Fields -->
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="id_first_name" class="form-label fw-semibold">
+                                                <i class="bi bi-person me-1 text-primary"></i>Ism
+                                            </label>
+                                            <input type="text" name="first_name" id="id_first_name"
+                                                   class="form-control form-control-lg {% if form.first_name.errors %}is-invalid{% endif %}"
+                                                   placeholder="Ismingiz"
+                                                   value="{{ form.first_name.value|default:'' }}" required>
+                                            {% if form.first_name.errors %}
+                                            <div class="invalid-feedback">{{ form.first_name.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="id_last_name" class="form-label fw-semibold">
+                                                <i class="bi bi-person me-1 text-primary"></i>Familiya
+                                            </label>
+                                            <input type="text" name="last_name" id="id_last_name"
+                                                   class="form-control form-control-lg {% if form.last_name.errors %}is-invalid{% endif %}"
+                                                   placeholder="Familiyangiz"
+                                                   value="{{ form.last_name.value|default:'' }}" required>
+                                            {% if form.last_name.errors %}
+                                            <div class="invalid-feedback">{{ form.last_name.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Username -->
+                                    <div class="mb-3">
+                                        <label for="id_username" class="form-label fw-semibold">
+                                            <i class="bi bi-at me-1 text-primary"></i>Foydalanuvchi nomi
+                                        </label>
+                                        <input type="text" name="username" id="id_username"
+                                               class="form-control form-control-lg {% if form.username.errors %}is-invalid{% endif %}"
+                                               placeholder="username"
+                                               value="{{ form.username.value|default:'' }}" required>
+                                        {% if form.username.errors %}
+                                        <div class="invalid-feedback">{{ form.username.errors.0 }}</div>
+                                        {% else %}
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            3-20 belgi, faqat harflar, raqamlar va _
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Email -->
+                                    <div class="mb-3">
+                                        <label for="id_email" class="form-label fw-semibold">
+                                            <i class="bi bi-envelope me-1 text-primary"></i>Email
+                                        </label>
+                                        <input type="email" name="email" id="id_email"
+                                               class="form-control form-control-lg {% if form.email.errors %}is-invalid{% endif %}"
+                                               placeholder="email@example.com"
+                                               value="{{ form.email.value|default:'' }}" required>
+                                        {% if form.email.errors %}
+                                        <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+                                        {% else %}
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Tasdiqlash havolasi yuboriladi
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Hidden Role Field - Default to Student -->
+                                    <input type="hidden" name="role" value="student">
+
+                                    <!-- Password -->
+                                    <div class="mb-3">
+                                        <label for="id_password1" class="form-label fw-semibold">
+                                            <i class="bi bi-lock me-1 text-primary"></i>Parol
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" name="password1" id="id_password1"
+                                                   class="form-control form-control-lg {% if form.password1.errors %}is-invalid{% endif %}"
+                                                   placeholder="Kamida 8 ta belgi" required>
+                                            <button class="btn btn-outline-secondary" type="button"
+                                                    onclick="togglePassword('id_password1', 'toggleIcon1')"
+                                                    title="Parolni ko'rsatish/yashirish">
+                                                <i class="bi bi-eye" id="toggleIcon1"></i>
+                                            </button>
+                                            {% if form.password1.errors %}
+                                            <div class="invalid-feedback">{{ form.password1.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="bi bi-shield-check me-1"></i>
+                                            Kamida 8 belgi, harflar va raqamlar
+                                        </div>
+                                    </div>
+
+                                    <!-- Confirm Password -->
+                                    <div class="mb-4">
+                                        <label for="id_password2" class="form-label fw-semibold">
+                                            <i class="bi bi-lock-fill me-1 text-primary"></i>Parolni tasdiqlang
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" name="password2" id="id_password2"
+                                                   class="form-control form-control-lg {% if form.password2.errors %}is-invalid{% endif %}"
+                                                   placeholder="Parolni qayta kiriting" required>
+                                            <button class="btn btn-outline-secondary" type="button"
+                                                    onclick="togglePassword('id_password2', 'toggleIcon2')"
+                                                    title="Parolni ko'rsatish/yashirish">
+                                                <i class="bi bi-eye" id="toggleIcon2"></i>
+                                            </button>
+                                            {% if form.password2.errors %}
+                                            <div class="invalid-feedback">{{ form.password2.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Terms & Conditions -->
+                                    <div class="form-check mb-4">
+                                        <input class="form-check-input" type="checkbox" id="terms" required>
+                                        <label class="form-check-label" for="terms">
+                                            <a href="#" class="text-decoration-none">Foydalanish shartlari</a> va
+                                            <a href="#" class="text-decoration-none">maxfiylik siyosati</a>ga roziman
+                                        </label>
+                                    </div>
+
+                                    <!-- Submit Button -->
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 mb-4">
+                                        <i class="bi bi-person-check me-2"></i>Ro'yxatdan o'tish
+                                    </button>
+
+                                    <!-- Divider -->
+                                    <div class="position-relative mb-4">
+                                        <hr>
+                                        <span class="position-absolute top-50 start-50 translate-middle px-3 text-muted small"
+                                              style="background: var(--card-bg);">
+                                            yoki
+                                        </span>
+                                    </div>
+
+                                    <!-- Social Register -->
+                                    <div class="d-grid gap-2 mb-4">
+                                        {% if google_login_available %}
+                                        <a class="btn btn-outline-secondary"
+                                           href="{% provider_login_url 'google' %}">
+                                            <i class="bi bi-google me-2"></i>Google bilan ro'yxatdan o'tish
+                                        </a>
+                                        {% else %}
+                                        <button type="button" class="btn btn-outline-secondary" disabled>
+                                            <i class="bi bi-google me-2"></i>Google bilan ro'yxatdan o'tish
+                                            <span class="badge bg-warning text-dark ms-2">Sozlanmagan</span>
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-info" disabled>
+                                            <i class="bi bi-telegram me-2"></i>Telegram bilan ro'yxatdan o'tish
+                                            <span class="badge bg-warning text-dark ms-2">Tez orada</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Login Link -->
+                                    <div class="text-center">
+                                        <p class="mb-0">
+                                            Hisobingiz bormi?
+                                            <a href="{% url 'login' %}" class="fw-semibold text-decoration-none">
+                                                Tizimga kiring <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </p>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Help Text -->
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-lock me-1"></i>
+                        Sizning ma'lumotlaringiz shifrlangan va xavfsiz saqlanadi
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+@keyframes backgroundMove {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(50px, 50px); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
+}
+
+.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePassword(inputId, iconId) {
+    const passwordInput = document.getElementById(inputId);
+    const toggleIcon = document.getElementById(iconId);
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('bi-eye');
+        toggleIcon.classList.add('bi-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('bi-eye-slash');
+        toggleIcon.classList.add('bi-eye');
+    }
+}
+
+// Password strength indicator
+document.addEventListener('DOMContentLoaded', function() {
+    const password1 = document.getElementById('id_password1');
+
+    if (password1) {
+        password1.addEventListener('input', function() {
+            const strength = checkPasswordStrength(this.value);
+            updatePasswordStrength(strength);
+        });
+    }
+});
+
+function checkPasswordStrength(password) {
+    let strength = 0;
+
+    if (password.length >= 8) strength++;
+    if (password.length >= 12) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^a-zA-Z0-9]/.test(password)) strength++;
+
+    return strength;
+}
+
+function updatePasswordStrength(strength) {
+    // Implement password strength indicator if needed
+    // This is a placeholder for future enhancement
+}
+</script>
+{% endblock %}

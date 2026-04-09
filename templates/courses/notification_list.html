@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block title %}Bildirishnomalar{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1"><i class="bi bi-bell me-2"></i>Bildirishnomalar</h2>
+                    <p class="text-muted mb-0">Barcha bildirishnomalaringiz</p>
+                </div>
+                {% if notifications %}
+                <form action="{% url 'notification_list' %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="mark_all_read" value="1">
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-check-all me-1"></i>Barchasini o'qilgan deb belgilash
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="row">
+        <div class="col-lg-8">
+            {% if notifications %}
+            <div class="card border-0 shadow-sm">
+                <div class="list-group list-group-flush">
+                    {% for notification in notifications %}
+                    <div class="list-group-item {% if not notification.is_read %}bg-light{% endif %}">
+                        <div class="d-flex align-items-start">
+                            <!-- Icon -->
+                            <div class="me-3">
+                                {% if notification.notification_type == 'enrollment' %}
+                                <div class="rounded-circle bg-primary bg-opacity-10 p-2">
+                                    <i class="bi bi-person-plus text-primary"></i>
+                                </div>
+                                {% elif notification.notification_type == 'completion' %}
+                                <div class="rounded-circle bg-success bg-opacity-10 p-2">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                </div>
+                                {% elif notification.notification_type == 'certificate' %}
+                                <div class="rounded-circle bg-warning bg-opacity-10 p-2">
+                                    <i class="bi bi-award text-warning"></i>
+                                </div>
+                                {% elif notification.notification_type == 'grade' %}
+                                <div class="rounded-circle bg-info bg-opacity-10 p-2">
+                                    <i class="bi bi-star text-info"></i>
+                                </div>
+                                {% elif notification.notification_type == 'badge' %}
+                                <div class="rounded-circle bg-danger bg-opacity-10 p-2">
+                                    <i class="bi bi-trophy text-danger"></i>
+                                </div>
+                                {% elif notification.notification_type == 'xp' %}
+                                <div class="rounded-circle bg-warning bg-opacity-10 p-2">
+                                    <i class="bi bi-lightning text-warning"></i>
+                                </div>
+                                {% else %}
+                                <div class="rounded-circle bg-secondary bg-opacity-10 p-2">
+                                    <i class="bi bi-bell text-secondary"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Content -->
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1 {% if not notification.is_read %}fw-bold{% endif %}">
+                                            {{ notification.title }}
+                                        </h6>
+                                        <p class="mb-1 text-muted small">{{ notification.message }}</p>
+                                    </div>
+                                    {% if not notification.is_read %}
+                                    <span class="badge bg-primary rounded-pill">Yangi</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>{{ notification.created_at|timesince }} oldin
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            {% if notifications.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if notifications.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ notifications.previous_page_number }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in notifications.paginator.page_range %}
+                    {% if notifications.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > notifications.number|add:'-3' and num < notifications.number|add:'3' %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if notifications.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ notifications.next_page_number }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-bell-slash display-1 text-muted mb-3"></i>
+                    <h5 class="text-muted">Bildirishnomalar yo'q</h5>
+                    <p class="text-muted">Yangi bildirishnomalar bu yerda ko'rinadi</p>
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                        <i class="bi bi-house me-2"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Stats -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Statistika</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Jami</span>
+                        <strong>{{ total_count|default:0 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">O'qilmagan</span>
+                        <strong class="text-primary">{{ unread_count|default:0 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Bugun</span>
+                        <strong>{{ today_count|default:0 }}</strong>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Links -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h6 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Tezkor havolalar</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'dashboard' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard
+                    </a>
+                    <a href="{% url 'my_courses' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-collection-play me-2 text-success"></i>Kurslarim
+                    </a>
+                    <a href="{% url 'gamification_profile' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-trophy me-2 text-warning"></i>Yutuqlarim
+                    </a>
+                    <a href="{% url 'my_certificates' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-award me-2 text-info"></i>Sertifikatlarim
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

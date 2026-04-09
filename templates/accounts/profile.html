@@ -1,0 +1,380 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ request.user.get_full_name|default:request.user.username }} - Profil{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row g-4">
+        <!-- Left Sidebar - Profile Card -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 90px;">
+                <div class="card-body text-center">
+                    <!-- Cover Background -->
+                    <div class="position-relative mb-4" style="margin: -1rem -1rem 0 -1rem; height: 120px; background: var(--accent-gradient); border-radius: var(--radius-xl) var(--radius-xl) 0 0;">
+                        <!-- Avatar -->
+                        <div class="position-absolute" style="bottom: -50px; left: 50%; transform: translateX(-50%);">
+                            {% if request.user.profile.avatar %}
+                            <img src="{{ request.user.profile.avatar.url }}" class="rounded-circle border border-4 border-white shadow"
+                                 width="120" height="120" style="object-fit: cover;" alt="{{ request.user.username }}">
+                            {% else %}
+                            <div class="rounded-circle d-flex align-items-center justify-content-center border border-4 border-white shadow"
+                                 style="width: 120px; height: 120px; background: var(--accent-gradient);">
+                                <span class="text-white display-4">
+                                    {{ request.user.first_name|first|default:request.user.username|first|upper }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            {% if request.user.profile.is_verified %}
+                            <span class="position-absolute bottom-0 end-0 bg-success rounded-circle p-2 border border-3 border-white"
+                                  title="Tasdiqlangan profil">
+                                <i class="bi bi-check-lg text-white"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Name & Username -->
+                    <div class="mt-5 pt-3">
+                        <h4 class="fw-bold mb-1">{{ request.user.get_full_name|default:request.user.username }}</h4>
+                        <p class="text-muted mb-2">@{{ request.user.username }}</p>
+
+                        {% if request.user.profile.is_teacher %}
+                        <span class="badge bg-primary mb-3">
+                            <i class="bi bi-mortarboard me-1"></i>O'qituvchi
+                        </span>
+                        {% else %}
+                        <span class="badge bg-success mb-3">
+                            <i class="bi bi-person me-1"></i>Talaba
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Bio -->
+                    {% if request.user.profile.bio %}
+                    <p class="text-muted mb-4">{{ request.user.profile.bio }}</p>
+                    {% endif %}
+
+                    <hr class="my-4">
+
+                    <!-- Info List -->
+                    <div class="text-start">
+                        {% if request.user.email %}
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="bi bi-envelope-fill text-primary me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <small class="text-muted d-block">Email</small>
+                                <span class="small">{{ request.user.email }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if request.user.profile.phone %}
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="bi bi-phone-fill text-primary me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <small class="text-muted d-block">Telefon</small>
+                                <span class="small">{{ request.user.profile.phone }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if request.user.profile.location %}
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="bi bi-geo-alt-fill text-primary me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <small class="text-muted d-block">Manzil</small>
+                                <span class="small">{{ request.user.profile.location }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if request.user.profile.birth_date %}
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="bi bi-calendar-event-fill text-primary me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <small class="text-muted d-block">Tug'ilgan sana</small>
+                                <span class="small">{{ request.user.profile.birth_date|date:"d F, Y" }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-clock-fill text-primary me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <small class="text-muted d-block">Ro'yxatdan o'tgan</small>
+                                <span class="small">{{ request.user.date_joined|date:"d F, Y" }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Social Links -->
+                    {% if request.user.profile.website or request.user.profile.github or request.user.profile.telegram or request.user.profile.linkedin %}
+                    <hr class="my-4">
+                    <div class="d-flex justify-content-center gap-2">
+                        {% if request.user.profile.website %}
+                        <a href="{{ request.user.profile.website }}" target="_blank"
+                           class="btn btn-outline-secondary btn-sm" title="Website">
+                            <i class="bi bi-globe"></i>
+                        </a>
+                        {% endif %}
+                        {% if request.user.profile.github %}
+                        <a href="https://github.com/{{ request.user.profile.github }}" target="_blank"
+                           class="btn btn-outline-dark btn-sm" title="GitHub">
+                            <i class="bi bi-github"></i>
+                        </a>
+                        {% endif %}
+                        {% if request.user.profile.telegram %}
+                        <a href="https://t.me/{{ request.user.profile.telegram|cut:'@' }}" target="_blank"
+                           class="btn btn-outline-info btn-sm" title="Telegram">
+                            <i class="bi bi-telegram"></i>
+                        </a>
+                        {% endif %}
+                        {% if request.user.profile.linkedin %}
+                        <a href="https://linkedin.com/in/{{ request.user.profile.linkedin }}" target="_blank"
+                           class="btn btn-outline-primary btn-sm" title="LinkedIn">
+                            <i class="bi bi-linkedin"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <hr class="my-4">
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'profile_edit' %}" class="btn btn-primary">
+                            <i class="bi bi-pencil-square me-2"></i>Profilni tahrirlash
+                        </a>
+                        <a href="{% url 'password_change' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-key me-2"></i>Parolni o'zgartirish
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Content - Stats & Activity -->
+        <div class="col-lg-8">
+            <!-- Stats Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-sm-3">
+                    <div class="card border-0 shadow-sm h-100 text-center">
+                        <div class="card-body p-3">
+                            <i class="bi bi-collection-play text-primary mb-2" style="font-size: 2rem;"></i>
+                            <div class="h3 fw-bold mb-0">{{ total_courses|default:0 }}</div>
+                            <small class="text-muted">Kurslar</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="card border-0 shadow-sm h-100 text-center">
+                        <div class="card-body p-3">
+                            <i class="bi bi-check-circle text-success mb-2" style="font-size: 2rem;"></i>
+                            <div class="h3 fw-bold mb-0">{{ completed_courses|default:0 }}</div>
+                            <small class="text-muted">Tugatilgan</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="card border-0 shadow-sm h-100 text-center">
+                        <div class="card-body p-3">
+                            <i class="bi bi-award text-warning mb-2" style="font-size: 2rem;"></i>
+                            <div class="h3 fw-bold mb-0">{{ certificates_count|default:0 }}</div>
+                            <small class="text-muted">Sertifikatlar</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="card border-0 shadow-sm h-100 text-center">
+                        <div class="card-body p-3">
+                            <i class="bi bi-book text-info mb-2" style="font-size: 2rem;"></i>
+                            <div class="h3 fw-bold mb-0">{{ completed_lessons|default:0 }}</div>
+                            <small class="text-muted">Darslar</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- XP & Level Card -->
+            {% if xp_profile %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="bi bi-lightning-charge-fill text-warning me-2"></i>
+                            Tajriba & Level
+                        </h5>
+                        <span class="badge bg-gradient px-3 py-2">
+                            Level {{ xp_profile.level|default:1 }}
+                        </span>
+                    </div>
+
+                    <div class="row align-items-center g-3">
+                        <div class="col-md-8">
+                            <div class="d-flex justify-content-between small mb-2">
+                                <span class="fw-semibold">
+                                    <i class="bi bi-star-fill text-warning me-1"></i>
+                                    {{ xp_profile.total_xp|default:0 }} XP
+                                </span>
+                                <span class="text-muted">
+                                    Keyingi level: {{ xp_profile.xp_for_next_level|default:100 }} XP
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 12px;">
+                                <div class="progress-bar bg-gradient"
+                                     role="progressbar"
+                                     style="width: {{ xp_profile.level_progress|default:0 }}%"
+                                     aria-valuenow="{{ xp_profile.level_progress|default:0 }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill"
+                                 style="background: var(--bg-secondary);">
+                                <i class="bi bi-fire text-danger fs-5"></i>
+                                <div>
+                                    <div class="fw-bold">{{ xp_profile.current_streak|default:0 }}</div>
+                                    <small class="text-muted">kun streak</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Badges -->
+            {% if user_badges %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-award text-warning me-2"></i>Nishonlar
+                    </h5>
+                    <a href="{% url 'gamification_profile' %}" class="btn btn-sm btn-outline-primary">
+                        Barchasi <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for ub in user_badges|slice:":6" %}
+                        <div class="col-4 col-sm-3 col-md-2">
+                            <div class="text-center p-3 rounded-3 h-100"
+                                 style="background: var(--bg-secondary); transition: transform 0.2s;"
+                                 onmouseover="this.style.transform='scale(1.05)'"
+                                 onmouseout="this.style.transform='scale(1)'"
+                                 title="{{ ub.badge.name }} - {{ ub.badge.description }}">
+                                <div class="fs-1 mb-2">{{ ub.badge.icon }}</div>
+                                <small class="fw-semibold d-block">{{ ub.badge.name|truncatewords:2 }}</small>
+                                <small class="text-muted">{{ ub.earned_at|date:"d.m.Y" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Courses -->
+            {% if recent_enrollments %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-collection-play text-primary me-2"></i>Kurslarim
+                    </h5>
+                    <a href="{% url 'my_courses' %}" class="btn btn-sm btn-outline-primary">
+                        Barchasi <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for enrollment in recent_enrollments|slice:":5" %}
+                    <a href="{% url 'course_learn' enrollment.course.slug %}"
+                       class="list-group-item list-group-item-action border-0">
+                        <div class="d-flex align-items-center">
+                            <!-- Thumbnail -->
+                            <div class="flex-shrink-0 me-3">
+                                {% if enrollment.course.thumbnail %}
+                                <img src="{{ enrollment.course.thumbnail.url }}"
+                                     class="rounded" width="60" height="60"
+                                     style="object-fit: cover;" alt="{{ enrollment.course.title }}">
+                                {% else %}
+                                <div class="rounded d-flex align-items-center justify-content-center"
+                                     style="width: 60px; height: 60px; background: var(--accent-gradient);">
+                                    <i class="bi bi-play-circle text-white fs-4"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Content -->
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ enrollment.course.title|truncatewords:6 }}</h6>
+                                <div class="progress mb-1" style="height: 6px;">
+                                    <div class="progress-bar"
+                                         style="width: {{ enrollment.progress|default:0 }}%"></div>
+                                </div>
+                                <small class="text-muted">
+                                    {% if enrollment.completed %}
+                                    <i class="bi bi-check-circle-fill text-success"></i> Tugatildi
+                                    {% else %}
+                                    {{ enrollment.progress|default:0 }}% tugatilgan
+                                    {% endif %}
+                                </small>
+                            </div>
+
+                            <!-- Badge -->
+                            <div class="flex-shrink-0 ms-3">
+                                {% if enrollment.completed %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-lg"></i>
+                                </span>
+                                {% else %}
+                                <span class="badge bg-primary">{{ enrollment.progress|default:0 }}%</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Certificates -->
+            {% if certificates %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-patch-check text-success me-2"></i>Sertifikatlar
+                    </h5>
+                    <a href="{% url 'my_certificates' %}" class="btn btn-sm btn-outline-primary">
+                        Barchasi <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for cert in certificates|slice:":5" %}
+                    <a href="{% url 'certificate_detail' cert.pk %}"
+                       class="list-group-item list-group-item-action border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-patch-check-fill text-success me-3 fs-3"></i>
+                                <div>
+                                    <h6 class="mb-1">{{ cert.course.title }}</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        {{ cert.issued_at|date:"d F, Y" }}
+                                    </small>
+                                </div>
+                            </div>
+                            <i class="bi bi-download text-primary fs-5"></i>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

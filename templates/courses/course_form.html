@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - LMS{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-{% if course %}pencil{% else %}plus-circle{% endif %} me-2"></i>{{ title }}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Xatoliklar:</strong>
+                        <ul class="mb-0 mt-2">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                <li>{{ field.label }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Title -->
+                        <div class="mb-3">
+                            <label for="id_title" class="form-label fw-bold">
+                                Kurs nomi <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="title" id="id_title"
+                                   class="form-control {% if form.title.errors %}is-invalid{% endif %}"
+                                   value="{{ form.title.value|default:'' }}"
+                                   placeholder="Masalan: Python dasturlash asoslari" required>
+                            {% if form.title.errors %}
+                            <div class="invalid-feedback">{{ form.title.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Short Description -->
+                        <div class="mb-3">
+                            <label for="id_short_description" class="form-label fw-bold">Qisqa tavsif</label>
+                            <input type="text" name="short_description" id="id_short_description"
+                                   class="form-control"
+                                   value="{{ form.short_description.value|default:'' }}"
+                                   placeholder="Kurs haqida qisqacha (1 qator)">
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="id_description" class="form-label fw-bold">
+                                To'liq tavsif <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="description" id="id_description"
+                                      class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                                      rows="5" placeholder="Kurs haqida batafsil ma'lumot..." required>{{ form.description.value|default:'' }}</textarea>
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <!-- Category -->
+                            <div class="col-md-6 mb-3">
+                                <label for="id_category" class="form-label fw-bold">Kategoriya</label>
+                                <select name="category" id="id_category" class="form-select">
+                                    <option value="">-- Tanlang --</option>
+                                    {% for choice in form.category.field.queryset %}
+                                    <option value="{{ choice.pk }}"
+                                            {% if form.category.value|stringformat:"s" == choice.pk|stringformat:"s" %}selected{% endif %}>
+                                        {{ choice.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Level -->
+                            <div class="col-md-6 mb-3">
+                                <label for="id_level" class="form-label fw-bold">Daraja</label>
+                                <select name="level" id="id_level" class="form-select">
+                                    <option value="beginner" {% if form.level.value == 'beginner' %}selected{% endif %}>Boshlang'ich</option>
+                                    <option value="intermediate" {% if form.level.value == 'intermediate' %}selected{% endif %}>O'rta</option>
+                                    <option value="advanced" {% if form.level.value == 'advanced' %}selected{% endif %}>Yuqori</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Language -->
+                            <div class="col-md-6 mb-3">
+                                <label for="id_language" class="form-label fw-bold">Til</label>
+                                <input type="text" name="language" id="id_language" class="form-control"
+                                       value="{{ form.language.value|default:"O'zbek" }}" placeholder="O'zbek">
+                            </div>
+
+                            <!-- Thumbnail -->
+                            <div class="col-md-6 mb-3">
+                                <label for="id_thumbnail" class="form-label fw-bold">Rasm (thumbnail)</label>
+                                <input type="file" name="thumbnail" id="id_thumbnail" class="form-control" accept="image/*">
+                                {% if course and course.thumbnail %}
+                                <small class="text-muted">Joriy: {{ course.thumbnail.name }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Price Options -->
+                        <div class="card bg-light border-0 mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="bi bi-currency-dollar me-2"></i>Narx sozlamalari
+                                </h6>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" name="is_free" id="id_is_free"
+                                           {% if form.is_free.value %}checked{% endif %} onchange="togglePrice()">
+                                    <label class="form-check-label" for="id_is_free">
+                                        <i class="bi bi-gift me-1"></i>Bepul kurs
+                                    </label>
+                                </div>
+
+                                <div class="row" id="priceFields">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="id_price" class="form-label">Narx (so'm)</label>
+                                        <input type="number" name="price" id="id_price" class="form-control"
+                                               value="{{ form.price.value|default:0 }}" min="0">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="id_discount_price" class="form-label">Chegirmali narx (so'm)</label>
+                                        <input type="number" name="discount_price" id="id_discount_price" class="form-control"
+                                               value="{{ form.discount_price.value|default:'' }}" min="0" placeholder="Ixtiyoriy">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Requirements -->
+                        <div class="mb-3">
+                            <label for="id_requirements" class="form-label fw-bold">Talablar</label>
+                            <textarea name="requirements" id="id_requirements" class="form-control" rows="3"
+                                      placeholder="Kursni boshlash uchun nima kerak? (har bir talabni yangi qatordan yozing)">{{ form.requirements.value|default:'' }}</textarea>
+                            <small class="text-muted">Har bir talabni yangi qatordan yozing</small>
+                        </div>
+
+                        <!-- What You Learn -->
+                        <div class="mb-3">
+                            <label for="id_what_you_learn" class="form-label fw-bold">Nimalarni o'rganasiz</label>
+                            <textarea name="what_you_learn" id="id_what_you_learn" class="form-control" rows="3"
+                                      placeholder="Kursdan nimalarni o'rganish mumkin?">{{ form.what_you_learn.value|default:'' }}</textarea>
+                            <small class="text-muted">Har bir mavzuni yangi qatordan yozing</small>
+                        </div>
+
+                        <!-- Publish Options -->
+                        <div class="card bg-light border-0 mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="bi bi-gear me-2"></i>Sozlamalar
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="is_published" id="id_is_published"
+                                                   {% if form.is_published.value %}checked{% endif %}>
+                                            <label class="form-check-label" for="id_is_published">
+                                                <i class="bi bi-eye me-1"></i>Nashr qilish (hammaga ko'rinadi)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="is_featured" id="id_is_featured"
+                                                   {% if form.is_featured.value %}checked{% endif %}>
+                                            <label class="form-check-label" for="id_is_featured">
+                                                <i class="bi bi-star me-1"></i>Tavsiya etilgan
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-2"></i>{{ button_text }}
+                            </button>
+                            <a href="{% url 'teacher_courses' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-2"></i>Bekor qilish
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePrice() {
+    const isFree = document.getElementById('id_is_free').checked;
+    const priceFields = document.getElementById('priceFields');
+
+    if (isFree) {
+        priceFields.style.opacity = '0.5';
+        priceFields.style.pointerEvents = 'none';
+        document.getElementById('id_price').value = 0;
+        document.getElementById('id_discount_price').value = '';
+    } else {
+        priceFields.style.opacity = '1';
+        priceFields.style.pointerEvents = 'auto';
+    }
+}
+
+// Page load
+document.addEventListener('DOMContentLoaded', togglePrice);
+</script>
+{% endblock %}

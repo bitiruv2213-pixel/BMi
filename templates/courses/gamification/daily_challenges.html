@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Kunlik Topshiriqlar{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="bi bi-calendar-check me-2"></i>Kunlik Topshiriqlar</h2>
+            <p class="text-muted">Har kuni topshiriqlarni bajaring va XP yig'ing!</p>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for challenge in challenges %}
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100 {% if challenge.id in completed_ids %}border-success{% endif %}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="display-6">🎯</div>
+                        {% if challenge.id in completed_ids %}
+                        <span class="badge bg-success"><i class="bi bi-check-lg"></i> Bajarildi</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">+{{ challenge.xp_reward }} XP</span>
+                        {% endif %}
+                    </div>
+                    <h5>{{ challenge.title }}</h5>
+                    <p class="text-muted small">{{ challenge.description }}</p>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {% if challenge.id in completed_ids %}100{% else %}0{% endif %}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-x display-1 text-muted"></i>
+                <p class="text-muted mt-3">Bugun uchun topshiriqlar yo'q</p>
+                <p class="small text-muted">Ertaga qaytib keling!</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

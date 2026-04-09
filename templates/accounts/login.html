@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load socialaccount %}
+
+{% block title %}Kirish - LMS Platform{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center py-5" style="background: var(--bg-secondary);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-10 col-lg-9 col-xl-8">
+                <div class="card border-0 shadow-lg overflow-hidden">
+                    <div class="row g-0">
+                        <!-- Left Side - Decorative -->
+                        <div class="col-lg-5 d-none d-lg-flex align-items-center justify-content-center p-5"
+                             style="background: var(--accent-gradient); position: relative; overflow: hidden;">
+                            <!-- Animated Background -->
+                            <div class="position-absolute" style="top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 50px 50px; animation: backgroundMove 20s linear infinite;"></div>
+
+                            <div class="text-center text-white position-relative">
+                                <div class="mb-4" style="animation: float 3s ease-in-out infinite;">
+                                    <i class="bi bi-mortarboard-fill" style="font-size: 6rem; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));"></i>
+                                </div>
+                                <h3 class="fw-bold mb-3">Xush kelibsiz!</h3>
+                                <p class="opacity-90 mb-4">
+                                    O'zbekistonning eng yaxshi online ta'lim platformasiga kirish
+                                </p>
+
+                                <!-- Stats Mini -->
+                                <div class="d-flex justify-content-center gap-4 mt-4">
+                                    <div>
+                                        <div class="h4 fw-bold mb-0">1000+</div>
+                                        <small class="opacity-75">Talabalar</small>
+                                    </div>
+                                    <div>
+                                        <div class="h4 fw-bold mb-0">50+</div>
+                                        <small class="opacity-75">Kurslar</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Side - Form -->
+                        <div class="col-lg-7">
+                            <div class="card-body p-4 p-lg-5">
+                                <!-- Header -->
+                                <div class="text-center mb-4">
+                                    <h2 class="fw-bold mb-2">Tizimga kirish</h2>
+                                    <p class="text-muted">Hisobingizga kiring va o'qishni davom eting</p>
+                                </div>
+
+                                <!-- Error Messages -->
+                                {% if error_message %}
+                                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    <div>{{ error_message }}</div>
+                                </div>
+                                {% endif %}
+
+                                {% if messages %}
+                                    {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} d-flex align-items-center" role="alert">
+                                        <i class="bi bi-info-circle-fill me-2"></i>
+                                        <div>{{ message }}</div>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+
+                                <form method="post" novalidate>
+                                    {% csrf_token %}
+
+                                    <!-- Username -->
+                                    <div class="mb-3">
+                                        <label for="id_username" class="form-label fw-semibold">
+                                            <i class="bi bi-person me-1 text-primary"></i>Foydalanuvchi nomi
+                                        </label>
+                                        <input type="text" name="username" id="id_username"
+                                               class="form-control form-control-lg"
+                                               placeholder="username yoki email"
+                                               required autofocus>
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Foydalanuvchi nomi yoki email manzilingizni kiriting
+                                        </div>
+                                    </div>
+
+                                    <!-- Password -->
+                                    <div class="mb-3">
+                                        <label for="id_password" class="form-label fw-semibold">
+                                            <i class="bi bi-lock me-1 text-primary"></i>Parol
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" name="password" id="id_password"
+                                                   class="form-control form-control-lg"
+                                                   placeholder="Parolingizni kiriting" required>
+                                            <button class="btn btn-outline-secondary" type="button"
+                                                    onclick="togglePassword('id_password', 'toggleIcon')"
+                                                    title="Parolni ko'rsatish/yashirish">
+                                                <i class="bi bi-eye" id="toggleIcon"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Remember Me & Forgot Password -->
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                            <label class="form-check-label" for="remember">
+                                                Meni eslab qol
+                                            </label>
+                                        </div>
+                                        <a href="{% url 'password_reset' %}" class="text-decoration-none small">
+                                            <i class="bi bi-question-circle me-1"></i>Parolni unutdingizmi?
+                                        </a>
+                                    </div>
+
+                                    <!-- Submit Button -->
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 mb-4">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i>Kirish
+                                    </button>
+
+                                    <!-- Divider -->
+                                    <div class="position-relative mb-4">
+                                        <hr>
+                                        <span class="position-absolute top-50 start-50 translate-middle px-3 bg-white text-muted small"
+                                              style="background: var(--card-bg) !important;">
+                                            yoki
+                                        </span>
+                                    </div>
+
+                                    <!-- Social Login Buttons -->
+                                    <div class="d-grid gap-2 mb-4">
+                                        {% if google_login_available %}
+                                        <a class="btn btn-outline-secondary"
+                                           href="{% provider_login_url 'google' %}">
+                                            <i class="bi bi-google me-2"></i>Google bilan kirish
+                                        </a>
+                                        {% else %}
+                                        <button type="button" class="btn btn-outline-secondary" disabled>
+                                            <i class="bi bi-google me-2"></i>Google bilan kirish
+                                            <span class="badge bg-warning text-dark ms-2">Sozlanmagan</span>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Register Link -->
+                                    <div class="text-center">
+                                        <p class="mb-0">
+                                            Hisobingiz yo'qmi?
+                                            <a href="{% url 'register' %}" class="fw-semibold text-decoration-none">
+                                                Ro'yxatdan o'ting <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </p>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Help Text -->
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Sizning ma'lumotlaringiz xavfsiz himoyalangan
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+@keyframes backgroundMove {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(50px, 50px); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.form-control:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
+}
+
+.btn-outline-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePassword(inputId, iconId) {
+    const passwordInput = document.getElementById(inputId);
+    const toggleIcon = document.getElementById(iconId);
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('bi-eye');
+        toggleIcon.classList.add('bi-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('bi-eye-slash');
+        toggleIcon.classList.add('bi-eye');
+    }
+}
+
+// Auto-hide messages after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert:not(.alert-danger)');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}

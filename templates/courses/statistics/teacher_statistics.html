@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Statistika - LMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 15px;
+        border: none;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-graph-up me-2"></i>Batafsil Statistika</h2>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Dashboard
+    </a>
+</div>
+
+<!-- Umumiy statistika -->
+<div class="row g-4 mb-4">
+    <div class="col-md-2">
+        <div class="card stat-card text-center py-3 bg-primary text-white">
+            <h3 class="mb-0">{{ total_courses }}</h3>
+            <small>Kurslar</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card text-center py-3 bg-success text-white">
+            <h3 class="mb-0">{{ total_students }}</h3>
+            <small>Talabalar</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card text-center py-3 bg-info text-white">
+            <h3 class="mb-0">{{ total_lessons }}</h3>
+            <small>Darslar</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card text-center py-3 bg-warning text-dark">
+            <h3 class="mb-0">{{ total_quizzes }}</h3>
+            <small>Quizlar</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card text-center py-3 bg-secondary text-white">
+            <h3 class="mb-0">{{ graded_submissions }}</h3>
+            <small>Baholangan</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card text-center py-3 bg-danger text-white">
+            <h3 class="mb-0">{{ pending_submissions }}</h3>
+            <small>Kutilmoqda</small>
+        </div>
+    </div>
+</div>
+
+<!-- Oylik yozilishlar -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Oylik yozilishlar (so'nggi 6 oy)</h6>
+    </div>
+    <div class="card-body">
+        <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Kurs bo'yicha statistika -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-collection me-2"></i>Kurslar bo'yicha statistika</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Kurs</th>
+                    <th>Talabalar</th>
+                    <th>Yakunlagan</th>
+                    <th>Yakunlash %</th>
+                    <th>O'rtacha progress</th>
+                    <th>O'rtacha quiz ball</th>
+                    <th>Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in course_stats %}
+                <tr>
+                    <td><strong>{{ stat.course.title }}</strong></td>
+                    <td>{{ stat.total_students }}</td>
+                    <td>{{ stat.completed }}</td>
+                    <td>
+                        <div class="progress" style="width: 100px; height: 8px;">
+                            <div class="progress-bar bg-success" style="width: {{ stat.completion_rate }}%"></div>
+                        </div>
+                        <small>{{ stat.completion_rate|floatformat:1 }}%</small>
+                    </td>
+                    <td>{{ stat.avg_progress }}%</td>
+                    <td>{{ stat.avg_quiz_score }}%</td>
+                    <td>
+                        <a href="{% url 'course_statistics' stat.course.slug %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-bar-chart"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Top talabalar -->
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>Top 10 talaba</h6>
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for student in top_students %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <span class="badge bg-primary me-2">{{ forloop.counter }}</span>
+                <strong>{{ student.student__first_name }} {{ student.student__last_name }}</strong>
+                <small class="text-muted ms-2">{{ student.courses_count }} kurs</small>
+            </div>
+            <span class="badge bg-success">{{ student.total_progress|floatformat:1 }}% progress</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const monthlyData = {{ monthly_enrollments|safe }};
+
+new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+        labels: monthlyData.map(d => d.month),
+        datasets: [{
+            label: 'Yozilishlar',
+            data: monthlyData.map(d => d.count),
+            backgroundColor: '#4f46e5',
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+    }
+});
+</script>
+{% endblock %}

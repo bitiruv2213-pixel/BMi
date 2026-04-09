@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Topshiriqni baholash - {{ assignment.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 class="fw-bold">
+                <i class="bi bi-clipboard-check me-2 text-primary"></i>Topshiriqni baholash
+            </h2>
+            <p class="text-muted mb-0">{{ assignment.title }} &mdash; {{ submission.student.get_full_name|default:submission.student.username }}</p>
+        </div>
+        <a href="{% url 'teacher_submissions' assignment.lesson.course.slug %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Orqaga
+        </a>
+    </div>
+
+    {% if submission.is_graded %}
+    <div class="alert alert-success d-flex align-items-center mb-4">
+        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+        <div>
+            Bu topshiriq allaqachon baholangan.
+            <strong>Ball: {{ submission.score }}/{{ assignment.max_score }}</strong>
+            {% if submission.graded_at %} &mdash; {{ submission.graded_at|date:"d M Y, H:i" }}{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Left: Submission Content -->
+        <div class="col-lg-8">
+            <!-- Assignment Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h6 class="mb-0 text-muted text-uppercase fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                        <i class="bi bi-info-circle me-1"></i>Topshiriq ma'lumotlari
+                    </h6>
+                </div>
+                <div class="card-body pt-0">
+                    <h5 class="fw-bold mb-2">{{ assignment.title }}</h5>
+                    <p class="text-muted mb-2">{{ assignment.description }}</p>
+                    {% if assignment.instructions %}
+                    <div class="alert alert-light border mb-0">
+                        <strong>Ko'rsatmalar:</strong> {{ assignment.instructions }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-text me-2"></i>Talaba javobi
+                    </h5>
+                    <small class="text-muted">{{ submission.submitted_at|date:"d M Y, H:i" }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3 p-3 rounded" style="background: var(--bs-light, #f8f9fa);">
+                        {% if submission.student.profile.avatar %}
+                        <img src="{{ submission.student.profile.avatar.url }}" class="rounded-circle me-3" width="40" height="40" style="object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3 fw-bold" style="width:40px; height:40px; font-size:1.1rem;">
+                            {{ submission.student.first_name|first|default:submission.student.username|first|upper }}
+                        </div>
+                        {% endif %}
+                        <div>
+                            <div class="fw-semibold">{{ submission.student.get_full_name|default:submission.student.username }}</div>
+                            <small class="text-muted">{{ submission.student.email }}</small>
+                        </div>
+                    </div>
+
+                    {% if submission.file %}
+                    <div class="alert alert-info d-flex align-items-center mb-3">
+                        <i class="bi bi-file-earmark-arrow-down fs-5 me-2"></i>
+                        <div>
+                            <strong>Yuklangan fayl:</strong>
+                            <a href="{{ submission.file.url }}" target="_blank" class="alert-link ms-1">
+                                Faylni ko'rish / yuklab olish
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if submission.content %}
+                    <div class="border rounded p-3" style="background: var(--bs-light, #f8f9fa); max-height: 500px; overflow-y: auto;">
+                        <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit; font-size: 0.95rem;">{{ submission.content }}</pre>
+                    </div>
+                    {% else %}
+                    <p class="text-muted fst-italic">Matn javobi yo'q</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: AI Recommendation & Grading Form -->
+        <div class="col-lg-4">
+            <!-- AI Recommendation -->
+            {% if ai_recommendation %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header text-white py-3 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                    <h5 class="mb-0">
+                        <i class="bi bi-robot me-2"></i>AI Tavsiyasi
+                    </h5>
+                    <a href="?reanalyze=1" class="btn btn-sm btn-light text-primary" title="Qayta tahlil qilish">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Qayta tahlil
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- AI Score -->
+                    <div class="text-center mb-3">
+                        <div class="display-4 fw-bold text-primary">
+                            {{ ai_recommendation.ai_score }}
+                        </div>
+                        <div class="text-muted">/ {{ ai_recommendation.max_score }} ball</div>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div class="progress-bar bg-primary" style="width: {% widthratio ai_recommendation.ai_score ai_recommendation.max_score 100 %}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Confidence -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="text-muted">Ishonch darajasi</small>
+                            <small class="fw-semibold">{{ ai_recommendation.confidence|floatformat:2 }}</small>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-success" style="width: {% widthratio ai_recommendation.confidence 1 100 %}%"></div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Analysis -->
+                    <div class="mb-3">
+                        <strong class="d-block mb-2">
+                            <i class="bi bi-chat-left-text text-primary me-1"></i>Tahlil:
+                        </strong>
+                        <p class="small mb-0">{{ ai_recommendation.analysis }}</p>
+                    </div>
+
+                    <!-- Strengths -->
+                    {% if ai_recommendation.strengths %}
+                    <div class="mb-3">
+                        <strong class="d-block mb-2 text-success">
+                            <i class="bi bi-check-circle me-1"></i>Kuchli tomonlar:
+                        </strong>
+                        <div class="small">{{ ai_recommendation.strengths|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Weaknesses -->
+                    {% if ai_recommendation.weaknesses %}
+                    <div class="mb-3">
+                        <strong class="d-block mb-2 text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Zaif tomonlar:
+                        </strong>
+                        <div class="small">{{ ai_recommendation.weaknesses|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Suggestions -->
+                    {% if ai_recommendation.suggestions %}
+                    <div>
+                        <strong class="d-block mb-2 text-info">
+                            <i class="bi bi-lightbulb me-1"></i>Takliflar:
+                        </strong>
+                        <div class="small">{{ ai_recommendation.suggestions|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-robot text-muted" style="font-size: 2.5rem; opacity: 0.4;"></i>
+                    <p class="text-muted mt-2 mb-3">AI tavsiya mavjud emas</p>
+                    <a href="?reanalyze=1" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-cpu me-1"></i>AI tahlil qilish
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Grading Form -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-star-fill text-warning me-2"></i>
+                        {% if submission.is_graded %}Bahoni tahrirlash{% else %}Baholash{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Ball *</label>
+                            <input type="number"
+                                   name="score"
+                                   class="form-control form-control-lg text-center fw-bold"
+                                   min="0"
+                                   max="{{ assignment.max_score|default:100 }}"
+                                   value="{% if submission.is_graded %}{{ submission.score }}{% elif ai_recommendation %}{{ ai_recommendation.ai_score }}{% endif %}"
+                                   required>
+                            <small class="text-muted">0 dan {{ assignment.max_score|default:100 }} gacha</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">O'qituvchi izohi</label>
+                            <textarea name="feedback"
+                                      class="form-control"
+                                      rows="5"
+                                      placeholder="Talabaga batafsil izoh yozing...">{% if submission.is_graded %}{{ submission.feedback }}{% endif %}</textarea>
+                            <small class="text-muted">Bu izoh talabaga ham ko'rinadi</small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg"
+                                    onclick="return confirm('Bahoni saqlashni tasdiqlaysizmi?')">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                {% if submission.is_graded %}Bahoni yangilash{% else %}Baholashni saqlash{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Muvaffaqiyatli{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card text-center">
+                <div class="bg-success text-white p-4">
+                    <i class="bi bi-check-circle" style="font-size: 4rem;"></i>
+                    <h2>Muvaffaqiyatli!</h2>
+                </div>
+                <div class="card-body">
+                    <h5>{{ payment.course.title }}</h5>
+                    <p class="text-success fs-4">{{ payment.amount|floatformat:0 }} so'm</p>
+                    <div class="alert alert-warning">+25 XP olindingiz!</div>
+                    <a href="{% url 'course_learn' payment.course.slug %}" class="btn btn-primary">Kursni boshlash</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

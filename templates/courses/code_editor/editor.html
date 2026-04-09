@@ -1,0 +1,82 @@
+﻿{% extends 'base.html' %}
+{% block title %}Kod Editor{% endblock %}
+
+{% block extra_css %}
+<style>
+#codeEditor{width:100%;height:350px;font-family:Consolas,monospace;font-size:14px;padding:15px;border:none;resize:none;background:#1e1e1e;color:#d4d4d4;border-radius:8px}
+#codeEditor:focus{outline:2px solid #667eea}
+.output-area{background:#0d1117;color:#58a6ff;font-family:Consolas,monospace;font-size:13px;padding:15px;border-radius:8px;min-height:150px;white-space:pre-wrap}
+.output-area .error{color:#f85149}
+.output-area .success{color:#3fb950}
+.language-btn.active{background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-color:transparent}
+.template-card{cursor:pointer}
+.template-card:hover{border-color:#667eea!important}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+<div class="row">
+<div class="col-lg-3 mb-3">
+<div class="card border-0 shadow-sm mb-3">
+<div class="card-header bg-transparent"><h6 class="mb-0"><i class="bi bi-code-slash me-2"></i>Til</h6></div>
+<div class="card-body">
+<div class="d-flex flex-wrap gap-2">
+<button class="btn btn-outline-secondary language-btn active" data-lang="python">Python</button>
+<button class="btn btn-outline-secondary language-btn" data-lang="javascript">JavaScript</button>
+<button class="btn btn-outline-secondary language-btn" data-lang="html">HTML</button>
+</div>
+</div>
+</div>
+<div class="card border-0 shadow-sm">
+<div class="card-header bg-transparent"><h6 class="mb-0">Shablonlar</h6></div>
+<div class="card-body p-2">
+<div class="template-card card border mb-2 p-2" data-template="hello"><small>Hello World</small></div>
+<div class="template-card card border mb-2 p-2" data-template="loop"><small>For Loop</small></div>
+<div class="template-card card border mb-2 p-2" data-template="function"><small>Funksiya</small></div>
+<div class="template-card card border p-2" data-template="list"><small>Ro'yxat</small></div>
+</div>
+</div>
+</div>
+<div class="col-lg-9">
+<div class="card border-0 shadow-sm">
+<div class="card-header bg-transparent d-flex justify-content-between">
+<span class="badge bg-primary" id="currentLang">Python</span>
+<div>
+<button class="btn btn-outline-secondary btn-sm" id="copyBtn"><i class="bi bi-clipboard"></i></button>
+<button class="btn btn-success btn-sm" id="runBtn"><i class="bi bi-play-fill"></i> Run</button>
+</div>
+</div>
+<div class="card-body">
+<textarea id="codeEditor" spellcheck="false"># Python
+print("Salom, Dunyo!")
+
+for i in range(1, 6):
+    print(f"Son: {i}")</textarea>
+</div>
+<div class="card-footer bg-transparent">
+<h6><i class="bi bi-terminal me-2"></i>Natija</h6>
+<div class="output-area" id="outputArea">Natija shu yerda...</div>
+</div>
+</div>
+<div class="card border-0 shadow-sm mt-3 d-none" id="htmlPreviewCard">
+<div class="card-header bg-transparent"><h6>HTML Preview</h6></div>
+<div class="card-body"><iframe id="htmlPreview" class="w-100 border" style="height:250px;"></iframe></div>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let lang='python';
+const tpl={python:{hello:'print("Salom, Dunyo!")',loop:'for i in range(1,6):\n    print(f"Son: {i}")',function:'def salom(ism):\n    return f"Salom, {ism}!"\n\nprint(salom("Ali"))',list:'sonlar=[1,2,3,4,5]\nprint(sum(sonlar))'},javascript:{hello:'console.log("Salom!");',loop:'for(let i=1;i<=5;i++){\n    console.log("Son:",i);\n}',function:'function salom(n){return "Salom, "+n+"!";}\nconsole.log(salom("Ali"));',list:'let a=[1,2,3,4,5];\nconsole.log(a.reduce((x,y)=>x+y));'},html:{hello:'<!DOCTYPE html>\n<html>\n<body style="text-align:center;padding:50px;">\n<h1 style="color:#667eea;">Salom!</h1>\n</body>\n</html>',loop:'<!DOCTYPE html>\n<html>\n<body>\n<ul><li>Olma</li><li>Banan</li></ul>\n</body>\n</html>',function:'<!DOCTYPE html>\n<html>\n<body>\n<button onclick="alert(\'Salom!\')">Bos</button>\n</body>\n</html>',list:'<!DOCTYPE html>\n<html>\n<body>\n<ol><li>1</li><li>2</li><li>3</li></ol>\n</body>\n</html>'}};
+const ed=document.getElementById('codeEditor'),out=document.getElementById('outputArea');
+document.querySelectorAll('.language-btn').forEach(b=>{b.onclick=function(){document.querySelectorAll('.language-btn').forEach(x=>x.classList.remove('active'));this.classList.add('active');lang=this.dataset.lang;document.getElementById('currentLang').textContent=lang;ed.value=tpl[lang].hello;document.getElementById('htmlPreviewCard').classList.toggle('d-none',lang!=='html');};});
+document.querySelectorAll('.template-card').forEach(c=>{c.onclick=function(){if(tpl[lang][this.dataset.template])ed.value=tpl[lang][this.dataset.template];};});
+document.getElementById('runBtn').onclick=function(){const code=ed.value;if(lang==='python'){out.innerHTML='<span style="color:orange">Yuborilmoqda...</span>';fetch('/code-editor/execute/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},body:JSON.stringify({code:code,language:'python'})}).then(r=>r.json()).then(d=>{out.innerHTML=d.success?'<span class="success">'+d.output+'</span>':'<span class="error">'+d.error+'</span>';}).catch(e=>{out.innerHTML='<span class="error">Xatolik</span>';});}else if(lang==='javascript'){try{let o=[];const old=console.log;console.log=(...a)=>o.push(a.join(' '));eval(code);console.log=old;out.innerHTML='<span class="success">'+(o.join('\n')||'OK')+'</span>';}catch(e){out.innerHTML='<span class="error">'+e.message+'</span>';}}else if(lang==='html'){document.getElementById('htmlPreview').srcdoc=code;document.getElementById('htmlPreviewCard').classList.remove('d-none');out.innerHTML='<span class="success">HTML yuqorida</span>';}};
+document.getElementById('copyBtn').onclick=()=>{navigator.clipboard.writeText(ed.value);alert('Nusxalandi!');};
+ed.onkeydown=function(e){if(e.ctrlKey&&e.key==='Enter'){e.preventDefault();document.getElementById('runBtn').click();}if(e.key==='Tab'){e.preventDefault();const s=this.selectionStart;this.value=this.value.substring(0,s)+'    '+this.value.substring(this.selectionEnd);this.selectionStart=this.selectionEnd=s+4;}};
+</script>
+{% endblock %}

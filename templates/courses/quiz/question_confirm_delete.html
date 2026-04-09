@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Savolni o'chirish - LMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Savolni o'chirish</h5>
+            </div>
+            <div class="card-body text-center">
+                <i class="bi bi-trash text-danger" style="font-size: 4rem;"></i>
+                <p class="mt-3">{{ question.text }}</p>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Rostdan ham bu savolni o\'chirmoqchimisiz?')">
+                            <i class="bi bi-trash me-2"></i>Ha, o'chirish
+                        </button>
+                        <a href="{% url 'quiz_detail' question.quiz.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg me-2"></i>Bekor qilish
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

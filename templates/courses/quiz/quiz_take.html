@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ quiz.title }} - Test{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quiz-timer {
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        z-index: 1000;
+    }
+    .question-nav {
+        position: sticky;
+        top: 70px;
+    }
+    .question-card {
+        scroll-margin-top: 100px;
+    }
+    .nav-dot {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 2px;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if quiz.time_limit %}
+<div class="quiz-timer">
+    <div class="card bg-dark text-white">
+        <div class="card-body py-2 px-3">
+            <i class="bi bi-clock me-2"></i>
+            <span id="timer">{{ quiz.time_limit }}:00</span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-question-circle me-2"></i>{{ quiz.title }}</h4>
+            </div>
+        </div>
+        
+        <form method="post" action="{% url 'quiz_submit' attempt.pk %}" id="quiz-form">
+            {% csrf_token %}
+            
+            {% for question in questions %}
+            <div class="card mb-4 question-card" id="question-{{ question.pk }}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>
+                        <span class="badge bg-primary me-2">{{ forloop.counter }}</span>
+                        <span class="badge bg-secondary">{{ question.points }} ball</span>
+                    </span>
+                    <span class="badge bg-info">{{ question.get_question_type_display }}</span>
+                </div>
+                <div class="card-body">
+                    <p class="lead mb-4">{{ question.text }}</p>
+                    
+                    {% if question.image %}
+                        <img src="{{ question.image.url }}" class="img-fluid mb-4 rounded" style="max-height: 300px;">
+                    {% endif %}
+                    
+                    {% if question.question_type == 'text' %}
+                        <textarea name="question_{{ question.pk }}" class="form-control" rows="4" 
+                                  placeholder="Javobingizni yozing..."></textarea>
+                    {% else %}
+                        <div class="options-list">
+                            {% for answer in question.shuffled_answers %}
+                            <div class="form-check mb-3 p-3 border rounded hover-shadow">
+                                <input class="form-check-input" 
+                                       type="{% if question.question_type == 'multiple' %}checkbox{% else %}radio{% endif %}" 
+                                       name="question_{{ question.pk }}" 
+                                       value="{{ answer.pk }}" 
+                                       id="answer_{{ answer.pk }}"
+                                       onchange="markAnswered({{ question.pk }})">
+                                <label class="form-check-label w-100 ms-2" for="answer_{{ answer.pk }}">
+                                    {{ answer.text }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="card">
+                <div class="card-body text-center">
+                    <p class="text-muted mb-3">Barcha savollarni javoblaganingizga ishonch hosil qiling</p>
+                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Testni yakunlashni xohlaysizmi?')">
+                        <i class="bi bi-check-circle me-2"></i>Testni yakunlash
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <div class="col-lg-3">
+        <div class="question-nav">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-grid me-2"></i>Savollar</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap">
+                        {% for question in questions %}
+                        <a href="#question-{{ question.pk }}" 
+                           class="btn btn-outline-primary nav-dot" 
+                           id="nav-{{ question.pk }}">
+                            {{ forloop.counter }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    <hr>
+                    <div class="small">
+                        <span class="badge bg-outline-primary border me-1">&nbsp;</span> Javoblanmagan<br>
+                        <span class="badge bg-success me-1">&nbsp;</span> Javoblangan
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAnswered(questionId) {
+    document.getElementById('nav-' + questionId).classList.remove('btn-outline-primary');
+    document.getElementById('nav-' + questionId).classList.add('btn-success');
+}
+
+{% if quiz.time_limit %}
+// Timer
+let timeLeft = {{ quiz.time_limit }} * 60;
+const timerEl = document.getElementById('timer');
+
+const countdown = setInterval(() => {
+    timeLeft--;
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    if (timeLeft <= 60) {
+        timerEl.parentElement.classList.remove('bg-dark');
+        timerEl.parentElement.classList.add('bg-danger');
+    }
+    
+    if (timeLeft <= 0) {
+        clearInterval(countdown);
+        alert('Vaqt tugadi! Test avtomatik yuboriladi.');
+        document.getElementById('quiz-form').submit();
+    }
+}, 1000);
+{% endif %}
+
+// Sahifadan chiqishda ogohlantirish
+window.onbeforeunload = function() {
+    return "Test yakunlanmagan. Chiqishni xohlaysizmi?";
+}
+
+document.getElementById('quiz-form').onsubmit = function() {
+    window.onbeforeunload = null;
+}
+</script>
+{% endblock %}

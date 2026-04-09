@@ -1,0 +1,433 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}LMS Platform - O'zbekistondagi #1 Online Ta'lim{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="page-header">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-7">
+                    <span class="badge bg-primary mb-3 px-3 py-2 hero-badge">
+                        <i class="bi bi-stars me-1"></i> O'zbekistondagi #1 ta'lim platformasi
+                    </span>
+                    <h1 class="mb-2">
+                        O'zbek tilidagi eng yaxshi
+                        <span class="text-gradient">online kurslar</span>
+                    </h1>
+                    <p class="text-muted mb-4">
+                        Dasturlash, dizayn, marketing va boshqa ko'plab sohalar bo'yicha
+                        professional kurslar bilan o'z karyerangizni boshlang!
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'course_list' %}" class="btn btn-primary btn-lg px-4 hero-cta">
+                            <i class="bi bi-collection-play me-2"></i>Kurslarni ko'rish
+                        </a>
+                        <a href="{% url 'register' %}" class="btn btn-outline-primary btn-lg px-4 hero-cta hero-cta-outline">
+                            <i class="bi bi-person-plus me-2"></i>Ro'yxatdan o'tish
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card h-100 hero-card">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-2">
+                                <i class="bi bi-mortarboard-fill me-2 text-primary"></i>Karyerani bugun boshlang
+                            </h5>
+                            <p class="text-muted mb-4">
+                                24/7 AI Mentor, gamifikatsiya va sertifikatlar bilan
+                                ta'limni yangi bosqichga olib chiqing.
+                            </p>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="card card-stat h-100">
+                                        <div class="stat-icon" style="background: var(--accent-gradient);">
+                                            <i class="bi bi-collection-play"></i>
+                                        </div>
+                                        <div class="stat-value" data-counter="{{ platform_stats.total_courses }}">{{ platform_stats.total_courses }}</div>
+                                        <div class="stat-label">Kurslar</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card card-stat h-100">
+                                        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                                            <i class="bi bi-people"></i>
+                                        </div>
+                                        <div class="stat-value" data-counter="{{ platform_stats.total_students }}">{{ platform_stats.total_students }}</div>
+                                        <div class="stat-label">Talabalar</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card card-stat h-100">
+                                        <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                                            <i class="bi bi-person-video3"></i>
+                                        </div>
+                                        <div class="stat-value" data-counter="{{ platform_stats.total_teachers }}">{{ platform_stats.total_teachers }}</div>
+                                        <div class="stat-label">O'qituvchilar</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card card-stat h-100">
+                                        <div class="stat-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                                            <i class="bi bi-star-fill"></i>
+                                        </div>
+                                        <div class="stat-value">{{ platform_stats.satisfaction_rate }}%</div>
+                                        <div class="stat-label">Mamnunlik</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Courses -->
+{% if featured_courses %}
+<section class="py-5">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="bi bi-stars me-2 text-gradient"></i>
+                Mashhur kurslar
+            </h2>
+            <p class="text-muted">Eng ko'p o'qilayotgan va yuqori baholangan kurslarimiz</p>
+        </div>
+
+        <div class="row g-4">
+            {% for course in featured_courses %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-course h-100">
+                    <!-- Thumbnail -->
+                    <div class="position-relative overflow-hidden">
+                        {% if course.thumbnail %}
+                        <img src="{{ course.thumbnail.url }}" class="card-img-top" alt="{{ course.title }}"
+                             style="height: 220px; object-fit: cover; transition: transform 0.3s ease;">
+                        {% else %}
+                        <div class="card-img-top d-flex align-items-center justify-content-center"
+                             style="height: 220px; background: var(--accent-gradient);">
+                            <i class="bi bi-play-circle text-white" style="font-size: 4rem; opacity: 0.8;"></i>
+                        </div>
+                        {% endif %}
+
+                        <!-- Badges -->
+                        <div class="position-absolute top-0 start-0 m-3 d-flex flex-column gap-2">
+                            {% if course.is_free %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-gift-fill me-1"></i>Bepul
+                            </span>
+                            {% elif course.discount_price %}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-tag-fill me-1"></i>Chegirma
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        {% if course.is_featured %}
+                        <div class="position-absolute top-0 end-0 m-3">
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-star-fill me-1"></i>Tavsiya
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Category & Duration -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge" style="background: var(--accent-gradient);">
+                                {{ course.category.name }}
+                            </span>
+                            <small class="text-muted">
+                                <i class="bi bi-clock me-1"></i>{{ course.total_duration|default:"--" }} daq
+                            </small>
+                        </div>
+
+                        <!-- Title -->
+                        <h5 class="card-title mb-2">
+                            <a href="{% url 'course_detail' course.slug %}"
+                               class="text-decoration-none stretched-link text-reset">
+                                {{ course.title|truncatewords:8 }}
+                            </a>
+                        </h5>
+
+                        <!-- Description -->
+                        <p class="card-text small text-muted mb-3">
+                            {{ course.description|truncatewords:15 }}
+                        </p>
+
+                        <!-- Teacher -->
+                        {% if course.teacher %}
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            {% if course.teacher.profile.avatar %}
+                            <img src="{{ course.teacher.profile.avatar.url }}"
+                                 class="rounded-circle" width="24" height="24" alt="{{ course.teacher.get_full_name }}">
+                            {% else %}
+                            <div class="avatar avatar-sm">
+                                {{ course.teacher.first_name|first|default:course.teacher.username|first|upper }}
+                            </div>
+                            {% endif %}
+                            <small class="text-muted">{{ course.teacher.get_full_name|default:course.teacher.username }}</small>
+                        </div>
+                        {% endif %}
+
+                        <!-- Rating & Students -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="text-warning">
+                                    <i class="bi bi-star-fill"></i>
+                                    <span class="fw-bold text-dark">{{ course.average_rating|floatformat:1|default:"5.0" }}</span>
+                                </div>
+                                <small class="text-muted">({{ course.total_reviews|default:0 }})</small>
+                            </div>
+                            <small class="text-muted">
+                                <i class="bi bi-people me-1"></i>{{ course.total_students|default:0 }}
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            {% if course.is_free %}
+                            <span class="h5 mb-0 text-success fw-bold">Bepul</span>
+                            {% elif course.discount_price %}
+                            <div>
+                                <small class="text-decoration-line-through text-muted me-2">
+                                    {{ course.price|floatformat:0 }} so'm
+                                </small>
+                                <span class="h5 mb-0 text-danger fw-bold">
+                                    {{ course.discount_price|floatformat:0 }} so'm
+                                </span>
+                            </div>
+                            {% else %}
+                            <span class="h5 mb-0 fw-bold">{{ course.price|floatformat:0 }} so'm</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-5">
+            <a href="{% url 'course_list' %}" class="btn btn-outline-primary btn-lg px-5">
+                <i class="bi bi-grid-3x3-gap me-2"></i>Barcha kurslarni ko'rish
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Categories -->
+{% if categories %}
+<section class="py-5" style="background: var(--bg-secondary);">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="bi bi-grid-3x3-gap me-2 text-gradient"></i>
+                Kategoriyalar
+            </h2>
+            <p class="text-muted">Qiziqishingizga mos yo'nalishni tanlang</p>
+        </div>
+
+        <div class="row g-4">
+            {% for category in categories %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <a href="{% url 'course_list' %}?category={{ category.slug }}"
+                   class="text-decoration-none">
+                    <div class="card h-100 text-center feature-card">
+                        <div class="card-body">
+                            <div class="feature-icon mx-auto mb-3">
+                                <i class="bi bi-{{ category.icon|default:'folder' }}"></i>
+                            </div>
+                            <h6 class="mb-2 fw-semibold">{{ category.name }}</h6>
+                            <small class="text-muted">
+                                {{ category.courses.count|default:0 }} kurs
+                            </small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Features -->
+<section class="py-5">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="bi bi-award me-2 text-gradient"></i>
+                Nima uchun bizni tanlashadi?
+            </h2>
+            <p class="text-muted">Platformamizning afzalliklari</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mx-auto mb-3">
+                            <i class="bi bi-translate"></i>
+                        </div>
+                        <h5 class="fw-bold mb-3">O'zbek tilida</h5>
+                        <p class="text-muted mb-0">
+                            Barcha kurslar o'zbek tilida, tushunarli va sodda tushuntirilgan
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mx-auto mb-3">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <h5 class="fw-bold mb-3">AI Mentor</h5>
+                        <p class="text-muted mb-0">
+                            Sun'iy intellekt yordamchisi 24/7 savollaringizga javob beradi
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mx-auto mb-3">
+                            <i class="bi bi-award"></i>
+                        </div>
+                        <h5 class="fw-bold mb-3">Sertifikat</h5>
+                        <p class="text-muted mb-0">
+                            Kurs tugatgandan so'ng rasmiy sertifikat oling
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mx-auto mb-3">
+                            <i class="bi bi-trophy"></i>
+                        </div>
+                        <h5 class="fw-bold mb-3">Gamifikatsiya</h5>
+                        <p class="text-muted mb-0">
+                            XP to'plang, badges oling va reytingda birinchi bo'ling
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mx-auto mb-3">
+                            <i class="bi bi-phone"></i>
+                        </div>
+                        <h5 class="fw-bold mb-3">Mobil qulay</h5>
+                        <p class="text-muted mb-0">
+                            Istalgan qurilmadan o'qing - telefon, planshet, kompyuter
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mx-auto mb-3">
+                            <i class="bi bi-infinity"></i>
+                        </div>
+                        <h5 class="fw-bold mb-3">Umrbod kirish</h5>
+                        <p class="text-muted mb-0">
+                            Bir marta xarid qiling - umrbod foydalaning
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="card text-center">
+            <div class="card-body py-5">
+                <h2 class="fw-bold mb-3">Bugun boshlang!</h2>
+                <p class="text-muted mb-4">
+                    Minglab talabalar allaqachon o'z karyeralarini bizning platformamiz bilan boshlashdi.
+                    Siz ham qo'shiling!
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="{% url 'register' %}" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-rocket-takeoff me-2"></i>Bepul ro'yxatdan o'tish
+                    </a>
+                    <a href="{% url 'course_list' %}" class="btn btn-outline-primary btn-lg px-5">
+                        <i class="bi bi-collection-play me-2"></i>Kurslarni ko'rish
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.hero-badge {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(6, 182, 212, 0.25);
+}
+
+.hero-cta {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.hero-cta-outline:hover {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.hero-card {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.hero-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-color-light);
+}
+
+.hero-card .card-stat {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-card .card-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.card-course:hover img {
+    transform: scale(1.05);
+}
+</style>
+{% endblock %}

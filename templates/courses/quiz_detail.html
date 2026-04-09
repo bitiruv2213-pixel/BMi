@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% block title %}{{ quiz.title }} - LMS Platform{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'course_list' %}">Kurslar</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'course_detail' quiz.lesson.course.slug %}">{{ quiz.lesson.course.title|truncatewords:4 }}</a></li>
+            <li class="breadcrumb-item active">{{ quiz.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="bi bi-question-circle me-2 text-info"></i>{{ quiz.title }}
+                </h1>
+                <p class="text-muted mb-0">{{ quiz.lesson.course.title }}</p>
+            </div>
+            {% if is_teacher %}
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <div class="btn-group">
+                    <a href="{% url 'question_create' quiz.pk %}" class="btn btn-success">
+                        <i class="bi bi-plus-lg me-1"></i>Savol qo'shish
+                    </a>
+                    <a href="{% url 'quiz_update' quiz.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i>Tahrirlash
+                    </a>
+                    <a href="{% url 'quiz_statistics' quiz.pk %}" class="btn btn-outline-info">
+                        <i class="bi bi-bar-chart me-1"></i>Statistika
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <!-- Quiz Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Test haqida</h5>
+                </div>
+                <div class="card-body">
+                    {% if quiz.description %}
+                    <p class="mb-4">{{ quiz.description }}</p>
+                    {% endif %}
+
+                    <div class="row g-4 text-center">
+                        <div class="col-6 col-md-3">
+                            <div class="card card-stat h-100">
+                                <div class="stat-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                                    <i class="bi bi-clock"></i>
+                                </div>
+                                <div class="stat-value">{{ quiz.time_limit }}</div>
+                                <div class="stat-label">Daqiqa</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card card-stat h-100">
+                                <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                                    <i class="bi bi-list-ol"></i>
+                                </div>
+                                <div class="stat-value">{{ questions|length }}</div>
+                                <div class="stat-label">Savollar</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card card-stat h-100">
+                                <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                                    <i class="bi bi-check-circle"></i>
+                                </div>
+                                <div class="stat-value">{{ required_pass_score }}%</div>
+                                <div class="stat-label">O'tish balli</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card card-stat h-100">
+                                <div class="stat-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </div>
+                                <div class="stat-value">{{ required_attempts }}</div>
+                                <div class="stat-label">Urinishlar</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Questions (Teacher only) -->
+            {% if is_teacher %}
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Savollar</h5>
+                    <span class="badge bg-primary rounded-pill">{{ questions|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if questions %}
+                    <div class="list-group list-group-flush">
+                        {% for question in questions %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-3" style="background: var(--bg-surface-hover);">
+                                    {{ forloop.counter }}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">{{ question.text|truncatewords:12 }}</div>
+                                    <small class="text-muted">{{ question.points }} ball</small>
+                                </div>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'question_update' question.pk %}" class="btn btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'question_delete' question.pk %}" class="btn btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox display-4 text-muted mb-3"></i>
+                        <p class="text-muted mb-0">Savollar yo'q</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            {% if not is_teacher %}
+            <!-- Start Quiz -->
+            <div class="card mb-4">
+                <div class="card-body text-center py-4">
+                    {% if not question_count_ok %}
+                    <div class="alert alert-warning text-start mb-3">
+                        Testni ishlatishdan oldin kamida {{ required_question_count }} ta savol qo'shilishi kerak.
+                    </div>
+                    {% endif %}
+                    {% if can_attempt %}
+                    <i class="bi bi-patch-question display-4 text-info mb-3"></i>
+                    <h5 class="mb-3">Testni boshlang</h5>
+                    <p class="text-muted small mb-4">
+                        Test {{ quiz.time_limit }} daqiqa davom etadi.
+                        O'tish uchun kamida {{ required_pass_score }}% ball to'plashingiz kerak.
+                    </p>
+                    <a href="{% url 'quiz_take' quiz.pk %}" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-play-fill me-2"></i>Boshlash
+                    </a>
+                    {% else %}
+                    <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+                    <h5 class="mb-3">Urinishlar tugadi</h5>
+                    <p class="text-muted small mb-0">
+                        Siz maksimal urinishlar soniga yetdingiz yoki testdan allaqachon o'tgansiz.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- User Attempts -->
+            {% if user_attempts %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Urinishlaringiz</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for attempt in user_attempts %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <div class="fw-semibold">{{ forloop.counter }}-urinish</div>
+                            <small class="text-muted">{{ attempt.started_at|date:"d.m.Y H:i" }}</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if attempt.passed %}
+                            <span class="badge bg-success">{{ attempt.score|floatformat:0 }}%</span>
+                            {% else %}
+                            <span class="badge bg-danger">{{ attempt.score|floatformat:0 }}%</span>
+                            {% endif %}
+                            <a href="{% url 'quiz_result' attempt.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

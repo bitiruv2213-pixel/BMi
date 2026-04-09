@@ -1,0 +1,136 @@
+
+{% extends 'base.html' %}
+{% block title %}Sharhlar - {{ course.title }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'course_detail' course.slug %}" class="text-decoration-none">
+                <i class="bi bi-arrow-left me-2"></i>{{ course.title }}
+            </a>
+            <h2 class="mt-2"><i class="bi bi-star-fill text-warning me-2"></i>Sharhlar</h2>
+        </div>
+        {% if can_review %}
+        <a href="{% url 'review_create' course.slug %}" class="btn btn-primary">
+            <i class="bi bi-pencil me-2"></i>Sharh qoldirish
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card bg-primary text-white mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4 text-center">
+                    <div class="display-3 fw-bold">{{ course.average_rating|floatformat:1 }}</div>
+                    <div class="text-warning fs-4">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= course.average_rating %}<i class="bi bi-star-fill"></i>{% else %}<i class="bi bi-star"></i>{% endif %}
+                        {% endfor %}
+                    </div>
+                    <p class="mb-0 mt-2">{{ course.total_reviews }} ta sharh</p>
+                </div>
+                <div class="col-md-8">
+                    {% for star in "54321" %}
+                    <div class="d-flex align-items-center mb-1">
+                        <span class="me-2">{{ star }} <i class="bi bi-star-fill text-warning"></i></span>
+                        <div class="progress flex-grow-1" style="height: 8px;">
+                            <div class="progress-bar bg-warning" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% for review in reviews %}
+    <div class="card mb-3 {% if review.is_featured %}border-warning border-2{% endif %}">
+        <div class="card-body">
+            <div class="d-flex">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
+                    {{ review.user.first_name|slice:":1"|upper }}
+                </div>
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ review.user.get_full_name }}</strong>
+                            {% if review.is_verified %}
+                            <span class="badge bg-success ms-1"><i class="bi bi-patch-check"></i> Tasdiqlangan</span>
+                            {% endif %}
+                            {% if review.is_featured %}
+                            <span class="badge bg-warning ms-1"><i class="bi bi-star"></i> Tanlangan</span>
+                            {% endif %}
+                            <div class="text-warning">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= review.rating %}<i class="bi bi-star-fill"></i>{% else %}<i class="bi bi-star"></i>{% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <small class="text-muted">{{ review.created_at|date:"d.m.Y" }}</small>
+                    </div>
+                    {% if review.title %}<h6 class="mt-2 mb-1">{{ review.title }}</h6>{% endif %}
+                    <p class="mb-2">{{ review.content }}</p>
+                    
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="text-muted small">Foydali bo'ldimi?</span>
+                        <button class="btn btn-sm btn-outline-success" onclick="voteHelpful({{ review.pk }}, true)">
+                            <i class="bi bi-hand-thumbs-up"></i> {{ review.helpful_count }}
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="voteHelpful({{ review.pk }}, false)">
+                            <i class="bi bi-hand-thumbs-down"></i> {{ review.not_helpful_count }}
+                        </button>
+                        
+                        {% if request.user == review.user %}
+                        <a href="{% url 'review_update' course.slug review.pk %}" class="btn btn-sm btn-outline-primary ms-auto">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{% url 'review_delete' course.slug review.pk %}" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                        {% endif %}
+                        
+                        {% if request.user == course.teacher and not review.instructor_response %}
+                        <a href="{% url 'instructor_response' course.slug review.pk %}" class="btn btn-sm btn-outline-info ms-auto">
+                            <i class="bi bi-reply"></i> Javob berish
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    {% if review.instructor_response %}
+                    <div class="bg-light border-start border-primary border-4 rounded p-3 mt-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-person-badge text-primary me-2"></i>
+                            <strong>O'qituvchi javobi</strong>
+                            <small class="text-muted ms-2">{{ review.instructor_response_at|date:"d.m.Y" }}</small>
+                        </div>
+                        <p class="mb-0">{{ review.instructor_response }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-chat-square-text" style="font-size: 4rem; color: #ccc;"></i>
+            <h4 class="mt-3 text-muted">Hali sharhlar yo'q</h4>
+            <p class="text-muted">Birinchi bo'lib sharh qoldiring!</p>
+            {% if can_review %}
+            <a href="{% url 'review_create' course.slug %}" class="btn btn-primary">
+                <i class="bi bi-pencil me-2"></i>Sharh qoldirish
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function voteHelpful(reviewId, isHelpful) {
+    fetch(`/courses/{{ course.slug }}/reviews/` + reviewId + `/helpful/?helpful=` + isHelpful, {
+        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}'}
+    }).then(() => location.reload());
+}
+</script>
+{% endblock %}

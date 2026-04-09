@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block title %}To'lov - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'course_list' %}">Kurslar</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'course_detail' course.slug %}">{{ course.title|truncatewords:5 }}</a></li>
+                        <li class="breadcrumb-item active">To'lov</li>
+                    </ol>
+                </nav>
+                <h2><i class="bi bi-cart-check me-2"></i>Kursni sotib olish</h2>
+            </div>
+
+            <div class="row">
+                <!-- Order Summary -->
+                <div class="col-md-7 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Buyurtma tafsilotlari</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex mb-4">
+                                {% if course.thumbnail %}
+                                <img src="{{ course.thumbnail.url }}" class="rounded me-3" 
+                                     style="width: 120px; height: 80px; object-fit: cover;">
+                                {% else %}
+                                <div class="rounded me-3 d-flex align-items-center justify-content-center"
+                                     style="width: 120px; height: 80px; background: linear-gradient(135deg, #667eea, #764ba2);">
+                                    <i class="bi bi-play-circle text-white" style="font-size: 2rem;"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <h6 class="mb-1">{{ course.title }}</h6>
+                                    <p class="text-muted small mb-1">{{ course.teacher.get_full_name }}</p>
+                                    <div class="text-warning small">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= course.average_rating %}
+                                            <i class="bi bi-star-fill"></i>
+                                            {% else %}
+                                            <i class="bi bi-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                        <span class="text-muted">({{ course.total_reviews }})</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Promo Code -->
+                            <div class="border-top pt-3">
+                                <form method="post" class="mb-3">
+                                    {% csrf_token %}
+                                    <label class="form-label small fw-bold">Promo kod</label>
+                                    <div class="input-group">
+                                        <input type="text" name="promo_code" class="form-control" 
+                                               placeholder="Promo kodni kiriting" value="{{ promo_code.code|default:'' }}">
+                                        <button type="submit" class="btn btn-outline-primary">Qo'llash</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Price Breakdown -->
+                            <div class="border-top pt-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Kurs narxi</span>
+                                    <span>{{ course.price|floatformat:0 }} so'm</span>
+                                </div>
+                                {% if course.discount_price %}
+                                <div class="d-flex justify-content-between mb-2 text-success">
+                                    <span>Chegirma</span>
+                                    <span>-{{ course.price|add:"-"|add:course.discount_price|floatformat:0 }} so'm</span>
+                                </div>
+                                {% endif %}
+                                {% if discount %}
+                                <div class="d-flex justify-content-between mb-2 text-success">
+                                    <span>Promo kod ({{ promo_code.code }})</span>
+                                    <span>-{{ discount|floatformat:0 }} so'm</span>
+                                </div>
+                                {% endif %}
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-bold">Jami</span>
+                                    <span class="fw-bold fs-5 text-primary">{{ final_price|floatformat:0 }} so'm</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>To'lov usuli</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="{% url 'payment_process' course.slug %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="amount" value="{{ final_price }}">
+                                {% if promo_code %}
+                                <input type="hidden" name="promo_code" value="{{ promo_code.code }}">
+                                {% endif %}
+
+                                <div class="mb-3">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="payment_method" 
+                                               id="payme" value="payme" checked>
+                                        <label class="form-check-label d-flex align-items-center" for="payme">
+                                            <img src="https://cdn.payme.uz/logo/payme_logo.svg" height="25" class="me-2">
+                                            Payme
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="payment_method" 
+                                               id="click" value="click">
+                                        <label class="form-check-label d-flex align-items-center" for="click">
+                                            <img src="https://click.uz/click/images/logo.svg" height="25" class="me-2">
+                                            Click
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="payment_method" 
+                                               id="uzum" value="uzum">
+                                        <label class="form-check-label d-flex align-items-center" for="uzum">
+                                            <i class="bi bi-bank me-2 text-success" style="font-size: 1.5rem;"></i>
+                                            Uzum Bank
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info small">
+                                    <i class="bi bi-shield-check me-2"></i>
+                                    Barcha to'lovlar xavfsiz va himoyalangan.
+                                </div>
+
+                                <button type="submit" class="btn btn-primary w-100 btn-lg" onclick="return confirm('To\'lovni amalga oshirmoqchimisiz?')">
+                                    <i class="bi bi-lock me-2"></i>To'lash - {{ final_price|floatformat:0 }} so'm
+                                </button>
+                            </form>
+
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    To'lov qilib, siz <a href="#">foydalanish shartlari</a>ga rozilik bildirasiz.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- What You Get -->
+                    <div class="card border-0 shadow-sm mt-3">
+                        <div class="card-body">
+                            <h6 class="mb-3">Kursga kirish bilan siz olasiz:</h6>
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    {{ course.total_lessons }} ta darsga to'liq kirish
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    Umrbod kirish huquqi
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    Sertifikat olish imkoniyati
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    O'qituvchi bilan muloqot
+                                </li>
+                                <li>
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    Mobil qurilmalardan kirish
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

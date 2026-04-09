@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}{{ course.title }} - Talabalar{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'teacher_courses' %}">Kurslarim</a></li>
+                    <li class="breadcrumb-item active">{{ course.title|truncatewords:3 }}</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-people me-2"></i>Talabalar ro'yxati</h2>
+        </div>
+        <a href="{% url 'teacher_course_edit' course.slug %}" class="btn btn-outline-primary"><i class="bi bi-pencil me-2"></i>Tahrirlash</a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0">{{ total_count }}</h3>
+                    <small>Jami</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0">{{ completed_count }}</h3>
+                    <small>Tugatgan</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm bg-warning text-dark">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0">{{ total_count|add:"-"|add:completed_count }}</h3>
+                    <small>Davom etayotgan</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-2">
+            <a href="{% url 'teacher_course_students' course.slug %}" class="btn btn-sm {% if not current_status %}btn-primary{% else %}btn-outline-secondary{% endif %}">Barchasi</a>
+            <a href="?status=in_progress" class="btn btn-sm {% if current_status == 'in_progress' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Davom etayotgan</a>
+            <a href="?status=completed" class="btn btn-sm {% if current_status == 'completed' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Tugatgan</a>
+        </div>
+    </div>
+
+    {% if enrollments %}
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Talaba</th>
+                        <th>Email</th>
+                        <th class="text-center">Progress</th>
+                        <th class="text-center">Holat</th>
+                        <th>Sana</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for enrollment in enrollments %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
+                                    {{ enrollment.student.username|slice:":1"|upper }}
+                                </div>
+                                <strong>{{ enrollment.student.get_full_name|default:enrollment.student.username }}</strong>
+                            </div>
+                        </td>
+                        <td>{{ enrollment.student.email }}</td>
+                        <td class="text-center">
+                            <div class="progress" style="height: 8px; width: 100px; display: inline-block;">
+                                <div class="progress-bar {% if enrollment.completed %}bg-success{% endif %}" style="width: {{ enrollment.progress }}%"></div>
+                            </div>
+                            <span class="ms-2">{{ enrollment.progress }}%</span>
+                        </td>
+                        <td class="text-center">
+                            {% if enrollment.completed %}<span class="badge bg-success">Tugatgan</span>{% else %}<span class="badge bg-primary">Davom</span>{% endif %}
+                        </td>
+                        <td>{{ enrollment.enrolled_at|date:"d.m.Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-people display-1 text-muted"></i>
+            <h4 class="text-muted mt-3">Talabalar yo'q</h4>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

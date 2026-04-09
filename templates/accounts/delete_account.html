@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Hisobni o'chirish - LMS Platform{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <!-- Warning Card -->
+            <div class="card border-danger shadow-lg mb-4">
+                <div class="card-header bg-danger text-white border-0 py-3">
+                    <h4 class="mb-0 d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill me-3 fs-3"></i>
+                        Hisobni o'chirish
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Alert -->
+                    <div class="alert alert-warning border-0 d-flex align-items-start mb-4">
+                        <i class="bi bi-exclamation-circle-fill me-3 mt-1 fs-4"></i>
+                        <div>
+                            <strong>Diqqat!</strong> Bu amalni qaytarib bo'lmaydi.
+                            Barcha ma'lumotlaringiz butunlay va qaytarilmas tarzda o'chib ketadi.
+                        </div>
+                    </div>
+
+                    <!-- What will be deleted -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">O'chiriladigan ma'lumotlar:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                <span class="text-muted">Profil ma'lumotlari va sozlamalar</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                <span class="text-muted">Kurslar progressi va natijalar</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                <span class="text-muted">Olingan sertifikatlar</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                <span class="text-muted">XP, badges va yutuqlar</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                <span class="text-muted">Chatbot tarixi</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                <span class="text-muted">Barcha boshqa ma'lumotlar</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Account Info -->
+                    <div class="p-3 rounded mb-4" style="background: var(--bg-secondary);">
+                        <div class="d-flex align-items-center mb-2">
+                            {% if request.user.profile.avatar %}
+                            <img src="{{ request.user.profile.avatar.url }}"
+                                 class="rounded-circle me-3"
+                                 width="50" height="50" style="object-fit: cover;"
+                                 alt="{{ request.user.username }}">
+                            {% else %}
+                            <div class="avatar me-3" style="width: 50px; height: 50px; font-size: 1.5rem;">
+                                {{ request.user.first_name|first|default:request.user.username|first|upper }}
+                            </div>
+                            {% endif %}
+                            <div>
+                                <div class="fw-bold">{{ request.user.get_full_name|default:request.user.username }}</div>
+                                <small class="text-muted">@{{ request.user.username }}</small>
+                            </div>
+                        </div>
+                        <div class="small text-muted">
+                            <i class="bi bi-calendar-event me-2"></i>
+                            Ro'yxatdan o'tgan: {{ request.user.date_joined|date:"d F, Y" }}
+                        </div>
+                    </div>
+
+                    <!-- Confirmation Form -->
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label fw-semibold">
+                                <i class="bi bi-lock me-1"></i>
+                                Tasdiqlash uchun parolingizni kiriting
+                            </label>
+                            <input type="password"
+                                   name="password"
+                                   id="password"
+                                   class="form-control form-control-lg"
+                                   placeholder="Parolingizni kiriting"
+                                   required
+                                   autofocus>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Xavfsizlik uchun joriy parolingizni kiriting
+                            </div>
+                        </div>
+
+                        <!-- Confirmation Checkbox -->
+                        <div class="form-check mb-4">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="confirm"
+                                   required>
+                            <label class="form-check-label fw-semibold" for="confirm">
+                                Men bu amalni tushunaman va barcha ma'lumotlarim o'chishiga roziman
+                            </label>
+                        </div>
+
+                        <!-- Error Message -->
+                        {% if error_message %}
+                        <div class="alert alert-danger d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>{{ error_message }}</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit"
+                                    class="btn btn-danger btn-lg flex-grow-1"
+                                    onclick="return confirmDelete();">
+                                <i class="bi bi-trash me-2"></i>Ha, hisobni o'chirish
+                            </button>
+                            <a href="{% url 'profile_edit' %}"
+                               class="btn btn-outline-secondary btn-lg flex-grow-1">
+                                <i class="bi bi-x-lg me-2"></i>Bekor qilish
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Alternative Options -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <h6 class="fw-bold mb-3">Muammo bormi?</h6>
+                    <p class="text-muted mb-3">
+                        Hisobni o'chirmasdan oldin, quyidagi variantlarni ko'rib chiqing:
+                    </p>
+                    <div class="d-flex flex-column gap-2">
+                        <a href="{% url 'profile_edit' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-gear me-2"></i>Sozlamalarni o'zgartirish
+                        </a>
+                        <a href="{% url 'password_change' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-key me-2"></i>Parolni yangilash
+                        </a>
+                        <a href="#" class="btn btn-outline-primary">
+                            <i class="bi bi-question-circle me-2"></i>Yordam markazi
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete() {
+    const checkbox = document.getElementById('confirm');
+    const password = document.getElementById('password');
+
+    if (!checkbox.checked) {
+        alert('Iltimos, tasdiqlash belgilanmasini belgilang!');
+        return false;
+    }
+
+    if (!password.value) {
+        alert('Iltimos, parolingizni kiriting!');
+        return false;
+    }
+
+    const confirmMessage = `DIQQAT!\n\nSiz rostdan ham hisobingizni o'chirmoqchimisiz?\n\nBu amal:\n• Barcha ma'lumotlaringizni o'chiradi\n• Qaytarib bo'lmaydi\n• Darhol amalga oshiriladi\n\nDavom etishni xohlaysizmi?`;
+
+    return confirm(confirmMessage);
+}
+
+// Prevent accidental form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const confirmCheckbox = document.getElementById('confirm');
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    // Disable submit button initially
+    submitButton.disabled = true;
+    submitButton.classList.add('disabled');
+
+    // Enable submit button only when checkbox is checked
+    confirmCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            submitButton.disabled = false;
+            submitButton.classList.remove('disabled');
+        } else {
+            submitButton.disabled = true;
+            submitButton.classList.add('disabled');
+        }
+    });
+});
+</script>
+{% endblock %}

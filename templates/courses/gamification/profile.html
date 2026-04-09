@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}Mening Yutuqlarim{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body py-4">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            {% if request.user.profile.avatar %}
+                            <img src="{{ request.user.profile.avatar.url }}" class="rounded-circle border border-3 border-white" width="100" height="100" style="object-fit: cover;">
+                            {% else %}
+                            <div class="bg-white rounded-circle d-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                                <span class="text-primary display-4">{{ request.user.first_name|first|default:request.user.username|first }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col">
+                            <h2 class="mb-1">{{ request.user.get_full_name|default:request.user.username }}</h2>
+                            <p class="mb-0 opacity-75">Level {{ xp_profile.level }} • {{ xp_profile.total_xp }} XP</p>
+                        </div>
+                        <div class="col-auto">
+                            <div class="text-center">
+                                <div class="display-4">🔥</div>
+                                <div class="fw-bold">{{ xp_profile.current_streak }} kun</div>
+                                <small class="opacity-75">streak</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6 text-warning mb-2">⭐</div>
+                    <h3 class="mb-0">{{ xp_profile.total_xp }}</h3>
+                    <small class="text-muted">Jami XP</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6 text-primary mb-2">🏆</div>
+                    <h3 class="mb-0">{{ xp_profile.level }}</h3>
+                    <small class="text-muted">Level</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6 text-danger mb-2">🔥</div>
+                    <h3 class="mb-0">{{ xp_profile.current_streak }}</h3>
+                    <small class="text-muted">Streak</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6 text-success mb-2">🎖️</div>
+                    <h3 class="mb-0">{{ user_badges.count }}</h3>
+                    <small class="text-muted">Nishonlar</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Badges -->
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-award me-2"></i>Nishonlar</h5>
+                    <span class="badge bg-primary">{{ user_badges.count }}/{{ all_badges.count }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for badge in all_badges %}
+                        <div class="col-md-4 col-6 mb-3">
+                            <div class="card h-100 {% if badge.id in earned_badge_ids %}border-success{% else %}opacity-50{% endif %}">
+                                <div class="card-body text-center">
+                                    <div class="display-4 mb-2">{{ badge.icon }}</div>
+                                    <h6 class="mb-1">{{ badge.name }}</h6>
+                                    <small class="text-muted">{{ badge.description|truncatewords:8 }}</small>
+                                    {% if badge.id in earned_badge_ids %}
+                                    <div class="mt-2">
+                                        <span class="badge bg-success"><i class="bi bi-check"></i> Olingan</span>
+                                    </div>
+                                    {% else %}
+                                    <div class="mt-2">
+                                        <span class="badge bg-secondary">🔒 Qulflangan</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center py-4">
+                            <p class="text-muted">Nishonlar mavjud emas</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- XP History -->
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>XP Tarixi</h5>
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        {% for tx in transactions %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <p class="mb-0 small">{{ tx.description }}</p>
+                                    <small class="text-muted">{{ tx.created_at|timesince }} oldin</small>
+                                </div>
+                                <span class="badge {% if tx.amount > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if tx.amount > 0 %}+{% endif %}{{ tx.amount }} XP
+                                </span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item text-center py-4">
+                            <p class="text-muted mb-0">Hali faoliyat yo'q</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Level Progress -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Level Progress</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="display-3 mb-2">{{ xp_profile.level }}</div>
+                    <p class="text-muted mb-3">Joriy level</p>
+                    <div class="progress mb-2" style="height: 20px;">
+                        <div class="progress-bar bg-primary" style="width: {{ xp_profile.level_progress }}%">
+                            {{ xp_profile.level_progress }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        Keyingi levelgacha: {{ xp_profile.xp_for_next_level }} XP
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

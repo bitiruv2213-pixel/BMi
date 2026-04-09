@@ -1,0 +1,1 @@
+web: python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py shell -c "from django.contrib.auth.models import User; User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@lms.uz', 'Admin123!')" && gunicorn lms_project.wsgi --bind 0.0.0.0:$PORT

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Sertifikat - {{ certificate.course.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .certificate-preview {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    .certificate-preview::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: rotate 30s linear infinite;
+    }
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .certificate-content {
+        position: relative;
+        z-index: 1;
+    }
+    .certificate-badge {
+        width: 100px;
+        height: 100px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 3rem;
+    }
+    .gold-text {
+        color: #ffd700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="certificate-preview mb-4">
+            <div class="certificate-content text-center">
+                <div class="certificate-badge">🎓</div>
+                <h1 class="gold-text mb-3">SERTIFIKAT</h1>
+                <p class="mb-4 opacity-75">Certificate of Completion</p>
+                
+                <p class="mb-2">Ushbu sertifikat tasdiqlaydiki,</p>
+                <h2 class="mb-3">{{ certificate.student.get_full_name }}</h2>
+                
+                <p class="mb-2">quyidagi kursni muvaffaqiyatli yakunladi:</p>
+                <h3 class="gold-text mb-4">{{ certificate.course.title }}</h3>
+                
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <div class="bg-white bg-opacity-10 rounded p-3 mb-3">
+                            <small class="d-block opacity-75">O'qituvchi</small>
+                            <strong>{{ certificate.course.teacher.get_full_name }}</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <small class="opacity-75">
+                        Berilgan sana: {{ certificate.issued_at|date:"d.m.Y" }}<br>
+                        Sertifikat raqami: {{ certificate.certificate_number }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5><i class="bi bi-award me-2"></i>Sertifikat ma'lumotlari</h5>
+                        <table class="table table-borderless mb-0">
+                            <tr>
+                                <td class="text-muted" width="150">Sertifikat ID:</td>
+                                <td><code>{{ certificate.id }}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Raqami:</td>
+                                <td><strong>{{ certificate.certificate_number }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Berilgan sana:</td>
+                                <td>{{ certificate.issued_at|date:"d.m.Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Tekshirish:</td>
+                                <td>
+                                    <a href="{% url 'certificate_verify' certificate.certificate_number %}" target="_blank">
+                                        Sertifikatni tekshirish
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="btn-group mb-2" role="group">
+                            <a href="{% url 'certificate_download' certificate.id %}?theme=classic" class="btn btn-outline-dark btn-sm">Classic</a>
+                            <a href="{% url 'certificate_download' certificate.id %}?theme=royal" class="btn btn-outline-primary btn-sm">Royal</a>
+                            <a href="{% url 'certificate_download' certificate.id %}?theme=modern" class="btn btn-outline-success btn-sm">Modern</a>
+                        </div>
+                        <a href="{% url 'certificate_download' certificate.id %}?theme=classic" class="btn btn-primary btn-lg d-block">
+                            <i class="bi bi-download me-2"></i>PDF yuklab olish
+                        </a>
+                        <p class="text-muted small mt-2">Yuqori sifatli PDF formatida</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{% url 'my_certificates' %}" class="btn btn-outline-primary">
+                <i class="bi bi-collection me-2"></i>Barcha sertifikatlarim
+            </a>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-house me-2"></i>Bosh sahifa
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

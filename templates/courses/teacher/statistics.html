@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Statistika{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="bi bi-graph-up me-2"></i>Statistika</h2>
+
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body text-center py-4">
+                    <h2 class="mb-0">{{ total_courses }}</h2>
+                    <small>Kurslar</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body text-center py-4">
+                    <h2 class="mb-0">{{ total_students }}</h2>
+                    <small>Talabalar</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-info text-white">
+                <div class="card-body text-center py-4">
+                    <h2 class="mb-0">{{ completed_students }}</h2>
+                    <small>Tugatganlar</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-warning text-dark">
+                <div class="card-body text-center py-4">
+                    <h2 class="mb-0">{{ total_revenue|floatformat:0 }}</h2>
+                    <small>Daromad</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent"><h5 class="mb-0">Kurslar</h5></div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Kurs</th>
+                        <th class="text-center">Talabalar</th>
+                        <th class="text-center">Reyting</th>
+                        <th class="text-center">Holat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                    <tr>
+                        <td><a href="{% url 'teacher_course_students' course.slug %}">{{ course.title|truncatewords:5 }}</a></td>
+                        <td class="text-center"><span class="badge bg-primary">{{ course.total_students }}</span></td>
+                        <td class="text-center"><i class="bi bi-star-fill text-warning"></i> {{ course.average_rating|floatformat:1 }}</td>
+                        <td class="text-center">{% if course.is_published %}<span class="badge bg-success">Faol</span>{% else %}<span class="badge bg-secondary">Qoralama</span>{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-4 text-muted">Kurslar yo'q</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

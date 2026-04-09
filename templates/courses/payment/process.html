@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}To'lov{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card text-center">
+                <div class="card-body p-4">
+                    <h4>{{ payment.get_provider_display }}</h4>
+                    <div class="alert alert-warning my-3">Demo rejim</div>
+                    <h2 class="text-primary">{{ payment.amount|floatformat:0 }} so'm</h2>
+                    <p>{{ payment.course.title }}</p>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'payment_confirm' payment.id %}" class="btn btn-success">Tasdiqlash</a>
+                        <a href="{% url 'payment_cancel' payment.id %}" class="btn btn-outline-danger">Bekor qilish</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

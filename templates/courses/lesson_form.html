@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - LMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'course_detail' course.slug %}">{{ course.title }}</a></li>
+                <li class="breadcrumb-item active">{{ title }}</li>
+            </ol>
+        </nav>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-plus me-2"></i>{{ title }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Dars nomi</label>
+                        {{ form.title }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tartib raqami</label>
+                            {{ form.order }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Davomiyligi (daqiqa)</label>
+                            {{ form.duration_minutes }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Video URL (YouTube yoki boshqa)</label>
+                        {{ form.video_url }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dars matni</label>
+                        {{ form.content }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Qo'shimcha fayl</label>
+                        {{ form.file }}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>Saqlash
+                        </button>
+                        <a href="{% url 'course_detail' course.slug %}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg me-2"></i>Bekor qilish
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

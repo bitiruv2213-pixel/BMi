@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}O'qituvchi statistikasi{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-graph-up me-2"></i>Statistika</h2>
+        <a href="{% url 'teacher_courses' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-2"></i>Kurslarim
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-collection-play display-4 mb-2"></i>
+                    <h2 class="mb-0">{{ total_courses }}</h2>
+                    <p class="mb-0">Jami kurslar</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-people display-4 mb-2"></i>
+                    <h2 class="mb-0">{{ total_students }}</h2>
+                    <p class="mb-0">Jami talabalar</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm bg-warning text-dark">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-cash-stack display-4 mb-2"></i>
+                    <h2 class="mb-0">{{ total_revenue|floatformat:0 }}</h2>
+                    <p class="mb-0">Jami daromad (so'm)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Courses Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Kurslar bo'yicha statistika</h5>
+        </div>
+        <div class="card-body">
+            {% if courses %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Kurs nomi</th>
+                            <th class="text-center">Talabalar</th>
+                            <th class="text-center">Reyting</th>
+                            <th class="text-center">Sharhlar</th>
+                            <th class="text-center">Narx</th>
+                            <th class="text-center">Holat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for course in courses %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'course_detail' course.slug %}" class="text-decoration-none">
+                                    {{ course.title|truncatewords:5 }}
+                                </a>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary">{{ course.total_students }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="text-warning">
+                                    <i class="bi bi-star-fill"></i> {{ course.average_rating|floatformat:1 }}
+                                </span>
+                            </td>
+                            <td class="text-center">{{ course.total_reviews }}</td>
+                            <td class="text-center">
+                                {% if course.is_free %}
+                                <span class="badge bg-success">Bepul</span>
+                                {% else %}
+                                {{ course.price|floatformat:0 }} so'm
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if course.is_published %}
+                                <span class="badge bg-success">Faol</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Qoralama</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <p class="text-muted mt-3">Hali kurslar yo'q</p>
+                <a href="{% url 'course_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus me-2"></i>Kurs yaratish
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

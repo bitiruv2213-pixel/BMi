@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}To'lovlar tarixi{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-cash-stack me-2"></i>To'lovlar tarixi</h2>
+        <div class="bg-success text-white px-4 py-2 rounded">
+            <strong>Jami: {{ total_revenue|floatformat:0 }} so'm</strong>
+        </div>
+    </div>
+
+    {% if payments %}
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Sana</th>
+                        <th>Talaba</th>
+                        <th>Kurs</th>
+                        <th>Summa</th>
+                        <th>Usul</th>
+                        <th>Holat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td>{{ payment.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>{{ payment.student.get_full_name|default:payment.student.username }}</td>
+                        <td>{{ payment.course.title|truncatewords:4 }}</td>
+                        <td><strong>{{ payment.amount|floatformat:0 }} so'm</strong></td>
+                        <td>
+                            {% if payment.payment_method == 'payme' %}
+                            <span class="badge bg-info">Payme</span>
+                            {% elif payment.payment_method == 'click' %}
+                            <span class="badge bg-primary">Click</span>
+                            {% else %}
+                            <span class="badge bg-success">Uzum</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if payment.status == 'completed' %}
+                            <span class="badge bg-success">Muvaffaqiyatli</span>
+                            {% else %}
+                            <span class="badge bg-warning">Kutilmoqda</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-cash display-1 text-muted"></i>
+            <h5 class="text-muted mt-3">Hali to'lovlar yo'q</h5>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Natija - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Natija kartasi -->
+        <div class="card mb-4 {% if attempt.passed %}border-success{% else %}border-danger{% endif %}">
+            <div class="card-body text-center py-5">
+                {% if attempt.passed %}
+                    <i class="bi bi-trophy-fill text-success" style="font-size: 5rem;"></i>
+                    <h2 class="text-success mt-3">Tabriklaymiz! 🎉</h2>
+                    <p class="lead">Siz testdan muvaffaqiyatli o'tdingiz!</p>
+                {% else %}
+                    <i class="bi bi-emoji-frown text-danger" style="font-size: 5rem;"></i>
+                    <h2 class="text-danger mt-3">Afsuski...</h2>
+                    <p class="lead">Siz testdan o'ta olmadingiz. Qayta urinib ko'ring!</p>
+                {% endif %}
+                
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h1 class="{% if attempt.passed %}text-success{% else %}text-danger{% endif %}">{{ attempt.score }}%</h1>
+                            <small class="text-muted">Natija</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h3>{{ quiz.passing_score }}%</h3>
+                            <small class="text-muted">O'tish balli</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h3>{{ attempt.time_spent|floatformat:0 }}s</h3>
+                            <small class="text-muted">Sarflangan vaqt</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if quiz.show_correct_answers %}
+        <!-- Javoblar tahlili -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Javoblar tahlili</h5>
+            </div>
+            <div class="card-body">
+                {% for response in responses %}
+                <div class="card mb-3 {% if response.is_correct %}border-success{% else %}border-danger{% endif %}">
+                    <div class="card-header d-flex justify-content-between {% if response.is_correct %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                        <span>Savol {{ forloop.counter }}</span>
+                        <span>
+                            {% if response.is_correct %}
+                                <i class="bi bi-check-circle"></i> To'g'ri
+                            {% else %}
+                                <i class="bi bi-x-circle"></i> Noto'g'ri
+                            {% endif %}
+                            ({{ response.question.points }} ball)
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="fw-bold">{{ response.question.text }}</p>
+                        
+                        {% if response.question.question_type == 'text' %}
+                            <p><strong>Sizning javobingiz:</strong> {{ response.text_answer|default:"Javob berilmagan" }}</p>
+                        {% else %}
+                            {% for answer in response.question.answers.all %}
+                            <div class="p-2 mb-1 rounded {% if answer.is_correct %}bg-success bg-opacity-25{% endif %}">
+                                {% if answer in response.selected_answers.all %}
+                                    <i class="bi bi-check-square-fill {% if answer.is_correct %}text-success{% else %}text-danger{% endif %}"></i>
+                                {% else %}
+                                    <i class="bi bi-square text-muted"></i>
+                                {% endif %}
+                                {{ answer.text }}
+                                {% if answer.is_correct %}
+                                    <span class="badge bg-success ms-2">To'g'ri javob</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if response.question.explanation %}
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="bi bi-lightbulb me-2"></i>
+                            <strong>Izoh:</strong> {{ response.question.explanation }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="text-center mt-4">
+            <a href="{% url 'quiz_detail' quiz.pk %}" class="btn btn-primary">
+                <i class="bi bi-arrow-left me-2"></i>Quizga qaytish
+            </a>
+            <a href="{% url 'course_learn' quiz.lesson.course.slug %}" class="btn btn-secondary">
+                <i class="bi bi-book me-2"></i>Kursga qaytish
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

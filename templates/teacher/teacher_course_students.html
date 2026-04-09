@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ course.title }} - Talabalar{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-people me-2 text-primary"></i>{{ course.title }}
+            </h2>
+            <p class="text-muted mb-0">Kursga yozilgan talabalar va ularning progressi</p>
+        </div>
+        <a href="{% url 'teacher_my_courses' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Kurslarim
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-people text-primary mb-2" style="font-size: 2rem;"></i>
+                    <h3 class="fw-bold mb-0">{{ total_students }}</h3>
+                    <small class="text-muted">Jami talabalar</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-play-circle text-info mb-2" style="font-size: 2rem;"></i>
+                    <h3 class="fw-bold mb-0">{{ active_students }}</h3>
+                    <small class="text-muted">Faol talabalar</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle text-success mb-2" style="font-size: 2rem;"></i>
+                    <h3 class="fw-bold mb-0">{{ completed_students }}</h3>
+                    <small class="text-muted">Tugatganlar</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-graph-up text-warning mb-2" style="font-size: 2rem;"></i>
+                    <h3 class="fw-bold mb-0">{{ avg_progress|floatformat:0 }}%</h3>
+                    <small class="text-muted">O'rtacha progress</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Info Card -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="fw-bold mb-2">{{ course.title }}</h5>
+                    <p class="text-muted mb-2">{{ course.description|truncatewords:20 }}</p>
+                    <div class="d-flex gap-3">
+                        <small class="text-muted">
+                            <i class="bi bi-book me-1"></i>{{ total_lessons }} dars
+                        </small>
+                        <small class="text-muted">
+                            <i class="bi bi-clock me-1"></i>{{ course.total_duration|default:0 }} daqiqa
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <a href="{% url 'course_detail' course.slug %}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-eye me-1"></i>Ko'rish
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary">
+                        <i class="bi bi-pencil me-1"></i>Tahrirlash
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ul me-2"></i>Talabalar ro'yxati
+                </h5>
+                <div class="input-group" style="max-width: 300px;">
+                    <span class="input-group-text border-end-0 bg-transparent">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0 ps-0" 
+                           placeholder="Qidirish..." id="searchInput">
+                </div>
+            </div>
+        </div>
+
+        {% if enrollments %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0">Talaba</th>
+                        <th class="border-0">Yozilgan sana</th>
+                        <th class="border-0">Progress</th>
+                        <th class="border-0">Tugatilgan darslar</th>
+                        <th class="border-0">Holat</th>
+                        <th class="border-0 text-end">Amallar</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsTable">
+                    {% for enrollment in enrollments %}
+                    <tr class="student-row">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if enrollment.student.profile.avatar %}
+                                <img src="{{ enrollment.student.profile.avatar.url }}" 
+                                     class="rounded-circle me-3"
+                                     width="40" height="40" style="object-fit: cover;" 
+                                     alt="{{ enrollment.student.username }}">
+                                {% else %}
+                                <div class="avatar me-3" style="width: 40px; height: 40px; font-size: 1rem;">
+                                    {{ enrollment.student.first_name|first|default:enrollment.student.username|first|upper }}
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-semibold student-name">
+                                        {{ enrollment.student.get_full_name|default:enrollment.student.username }}
+                                    </div>
+                                    <small class="text-muted">@{{ enrollment.student.username }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <small>{{ enrollment.enrolled_at|date:"d M, Y" }}</small>
+                        </td>
+                        <td>
+                            <div style="width: 150px;">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-semibold">{{ enrollment.progress_percent|floatformat:0 }}%</small>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar 
+                                        {% if enrollment.progress_percent >= 75 %}bg-success
+                                        {% elif enrollment.progress_percent >= 50 %}bg-info
+                                        {% elif enrollment.progress_percent >= 25 %}bg-warning
+                                        {% else %}bg-danger{% endif %}" 
+                                         style="width: {{ enrollment.progress_percent }}%">
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">
+                                {{ enrollment.lessons_completed }} / {{ total_lessons }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if enrollment.completed %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Tugatildi
+                            </span>
+                            {% else %}
+                            <span class="badge bg-info">
+                                <i class="bi bi-play-circle me-1"></i>Jarayonda
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'teacher_student_detail' course.slug enrollment.student.id %}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye me-1"></i>Batafsil
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="card-body text-center py-5">
+            <i class="bi bi-people" style="font-size: 4rem; opacity: 0.3;"></i>
+            <h5 class="fw-bold mt-3 mb-2">Hali talabalar yo'q</h5>
+            <p class="text-muted mb-0">Bu kursga hali hech kim yozilmagan</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Search functionality
+document.getElementById('searchInput')?.addEventListener('input', function(e) {
+    const searchText = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('.student-row');
+    
+    rows.forEach(row => {
+        const name = row.querySelector('.student-name').textContent.toLowerCase();
+        if (name.includes(searchText)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}
