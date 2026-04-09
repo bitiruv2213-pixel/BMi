@@ -34,6 +34,159 @@ QUIZ_REQUIRED_PASS_SCORE = 75
 QUIZ_REQUIRED_MAX_ATTEMPTS = 3
 QUIZ_FAILED_XP_PENALTY = 10
 
+GEMINI_GENERATE_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-2.0-flash:generateContent"
+)
+
+
+def _call_gemini(parts, timeout=30):
+    api_key = getattr(settings, 'GEMINI_API_KEY', '')
+    if not api_key:
+        return {
+            'ok': False,
+            'error_type': 'missing_key',
+            'message': "AI kaliti sozlanmagan.",
+        }
+
+    try:
+        resp = _requests.post(
+            GEMINI_GENERATE_URL,
+            params={"key": api_key},
+            json={"contents": [{"parts": parts}]},
+            timeout=timeout,
+        )
+        try:
+            data = resp.json()
+        except ValueError:
+            data = {}
+
+        if resp.status_code == 200:
+            text = (
+                data.get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "")
+                .strip()
+            )
+            if text:
+                return {'ok': True, 'text': text, 'data': data}
+            return {
+                'ok': False,
+                'error_type': 'empty_response',
+                'message': "AI bo'sh javob qaytardi.",
+                'data': data,
+            }
+
+        error = data.get("error", {}) if isinstance(data, dict) else {}
+        error_message = error.get("message", "Noma'lum xatolik")
+        error_status = str(error.get("status", "")).upper()
+
+        is_quota_error = (
+            resp.status_code == 429
+            or error_status in {'RESOURCE_EXHAUSTED', 'RATE_LIMIT_EXCEEDED'}
+            or 'quota' in error_message.lower()
+            or 'billing' in error_message.lower()
+        )
+
+        return {
+            'ok': False,
+            'error_type': 'quota' if is_quota_error else 'api',
+            'message': error_message,
+            'status_code': resp.status_code,
+            'data': data,
+        }
+    except _requests.RequestException as exc:
+        return {
+            'ok': False,
+            'error_type': 'network',
+            'message': str(exc),
+        }
+    except Exception as exc:
+        return {
+            'ok': False,
+            'error_type': 'unexpected',
+            'message': str(exc),
+        }
+
+
+def _fallback_chat_response(message, course=None, error_type=None):
+    course_text = f" '{course.title}' kursi bo'yicha" if course else ''
+    guidance = (
+        "AI xizmatida vaqtinchalik cheklov bor. "
+        "Shu sabab avtomatik javob o'rniga qisqa yo'l-yo'riq beraman.\n\n"
+    )
+    if error_type == 'missing_key':
+        guidance = (
+            "AI xizmati hali sozlanmagan. "
+            "Admin `GEMINI_API_KEY` ni yangilashi kerak.\n\n"
+        )
+
+    lower_message = message.lower()
+
+    if 'django' in lower_message:
+        body = (
+            f"Django{course_text} bo'yicha tavsiya:\n"
+            "1. `urls.py`, `views.py`, `templates/` bog'lanishini tekshiring.\n"
+            "2. Model o'zgargan bo'lsa `makemigrations` va `migrate` qiling.\n"
+            "3. Form yoki query xatosida traceback'ning eng past qatorini tekshiring.\n"
+            "4. Xatolik matnini yuborsangiz, aniqroq yechim beraman."
+        )
+    elif 'python' in lower_message:
+        body = (
+            f"Python{course_text} bo'yicha tavsiya:\n"
+            "1. Masalani kichik funksiyalarga bo'ling.\n"
+            "2. `print()` yoki debugger bilan oraliq qiymatlarni tekshiring.\n"
+            "3. `TypeError`, `KeyError`, `IndexError` bo'lsa kiruvchi ma'lumotni tekshiring.\n"
+            "4. Kod bo'lagini yuborsangiz, to'g'ridan-to'g'ri tuzatib beraman."
+        )
+    elif 'xato' in lower_message or 'error' in lower_message:
+        body = (
+            "Xatoni topish uchun quyidagilarni yuboring:\n"
+            "1. To'liq error matni\n"
+            "2. Shu xatoga olib kelgan kod bo'lagi\n"
+            "3. Qaysi fayl va qaysi amal paytida chiqqani\n"
+            "Shunda aniq yechim yozaman."
+        )
+    else:
+        body = (
+            f"Savolingiz{course_text} bo'yicha qabul qilindi, lekin AI servis hozir limitga urildi.\n"
+            "Savolni aniqroq yozing yoki kod/error parchani yuboring. "
+            "Men mavjud ma'lumot asosida qo'lda yo'naltiruvchi javob beraman."
+        )
+
+    return guidance + body
+
+
+def _build_fallback_ai_grade(submission, assignment, reason):
+    max_score = assignment.max_score or 100
+    submission_text = (submission.content or '').strip()
+    has_file = bool(submission.file)
+
+    content_length = len(submission_text)
+    ratio = 0.35
+    if content_length >= 120:
+        ratio = 0.55
+    if content_length >= 400:
+        ratio = 0.7
+    if has_file:
+        ratio += 0.1
+
+    ratio = min(ratio, 0.85)
+    score = max(0, min(max_score, int(round(max_score * ratio))))
+
+    return {
+        'score': score,
+        'confidence': 0.35,
+        'analysis': (
+            "AI servis vaqtincha ishlamadi, shuning uchun taxminiy fallback tahlil yaratildi. "
+            f"Sabab: {reason[:120]}"
+        ),
+        'strengths': "Topshiriq avtomatik tarzda to'liq tahlil qilinmadi.",
+        'weaknesses': "Natija Gemini quota yoki tarmoq cheklovi sabab cheklangan.",
+        'suggestions': "Admin AI kalitini yoki billing/quota holatini tekshirsin; o'qituvchi qo'lda review qilsin.",
+    }
+
 
 def _redirect_dashboard_for_role(request):
     role = get_role(request.user)
@@ -1304,33 +1457,20 @@ def daily_challenges(request):
 # CHATBOT
 # ==========================================
 def generate_ai_response(message, course=None):
-    api_key = getattr(settings, 'GEMINI_API_KEY', '')
-    if not api_key:
-        return "AI kaliti sozlanmagan. Admin bilan bog'laning."
-
     system_prompt = """Sen LMS platformasining AI yordamchisisisan. O'zbek tilida javob ber.
 Dasturlash, Django, Python va boshqa mavzularda yordam ber. Qisqa va foydali javoblar ber."""
 
     if course:
         system_prompt += f"\n\nHozir talaba '{course.title}' kursini o'qiyapti."
 
-    try:
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-        resp = _requests.post(
-            url,
-            params={"key": api_key},
-            json={"contents": [{"parts": [{"text": f"{system_prompt}\n\nSavol: {message}"}]}]},
-            timeout=30,
-        )
-        data = resp.json()
+    result = _call_gemini(
+        [{"text": f"{system_prompt}\n\nSavol: {message}"}],
+        timeout=30,
+    )
+    if result['ok']:
+        return result['text']
 
-        if resp.status_code == 200:
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-
-        error_msg = data.get("error", {}).get("message", "Noma'lum xatolik")
-        return f"AI xatolik: {error_msg[:150]}"
-    except Exception as e:
-        return f"AI xatolik: {str(e)[:150]}"
+    return _fallback_chat_response(message, course=course, error_type=result.get('error_type'))
 
 
 @login_required
@@ -1516,10 +1656,11 @@ def analyze_submission_with_ai(submission, assignment):
     import os as _os
 
     api_key = getattr(settings, 'GEMINI_API_KEY', '')
-    if not api_key:
-        return None
 
     max_score = assignment.max_score or 100
+
+    if not api_key:
+        return _build_fallback_ai_grade(submission, assignment, "GEMINI_API_KEY topilmadi")
 
     # Topshiriq matni (description + instructions)
     assignment_text = assignment.description or ''
@@ -1596,19 +1737,12 @@ MUHIM: Faqat JSON formatda javob ber, boshqa matn qo'shma!"""
 
         parts = [{"text": prompt}] + extra_parts
 
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-        resp = _requests.post(
-            url,
-            params={"key": api_key},
-            json={"contents": [{"parts": parts}]},
-            timeout=45,
-        )
-        data = resp.json()
-        if resp.status_code != 200:
-            print(f"Gemini API xatosi: {resp.status_code} - {data}")
-            return None
+        result = _call_gemini(parts, timeout=45)
+        if not result['ok']:
+            print(f"Gemini API xatosi: {result.get('error_type')} - {result.get('message')}")
+            return _build_fallback_ai_grade(submission, assignment, result.get('message', 'AI mavjud emas'))
 
-        response_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        response_text = result['text'].strip()
 
         # JSON'ni topish
         json_match = _re.search(r'\{[\s\S]*\}', response_text)
@@ -1629,14 +1763,7 @@ MUHIM: Faqat JSON formatda javob ber, boshqa matn qo'shma!"""
 
     except Exception as e:
         print(f"AI tahlil xatosi: {e}")
-        return {
-            'score': int(max_score * 0.7),
-            'confidence': 0.5,
-            'analysis': f"AI tahlil qilishda xatolik: {str(e)[:100]}",
-            'strengths': "Tahlil qilinmadi",
-            'weaknesses': "Tahlil qilinmadi",
-            'suggestions': "Qayta urinib ko'ring"
-        }
+        return _build_fallback_ai_grade(submission, assignment, str(e))
 
 
 @login_required
