@@ -962,13 +962,9 @@ def assignment_detail(request, pk):
 
     assignment = get_object_or_404(Assignment, pk=pk)
     submission = Submission.objects.filter(student=request.user, assignment=assignment).first()
-    ai_recommendation = None
-    if submission:
-        ai_recommendation = AIGradeRecommendation.objects.filter(submission=submission).first()
     return render(request, 'courses/assignment_detail.html', {
         'assignment': assignment,
         'submission': submission,
-        'ai_recommendation': ai_recommendation
     })
 
 

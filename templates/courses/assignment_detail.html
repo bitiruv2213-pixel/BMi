@@ -78,37 +78,6 @@
             </div>
             {% endif %}
 
-            {% if ai_recommendation %}
-            <!-- AI tahlili -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="bi bi-robot me-2 text-info"></i>AI tavsiya tahlili</h6>
-                    <span class="badge bg-info">{{ ai_recommendation.ai_score }}/{{ ai_recommendation.max_score }}</span>
-                </div>
-                <div class="card-body">
-                    <p class="mb-3">{{ ai_recommendation.analysis }}</p>
-                    {% if ai_recommendation.strengths %}
-                    <div class="mb-2">
-                        <strong class="text-success"><i class="bi bi-check-circle me-1"></i>Kuchli tomonlar:</strong>
-                        <div class="small mt-1">{{ ai_recommendation.strengths|linebreaks }}</div>
-                    </div>
-                    {% endif %}
-                    {% if ai_recommendation.weaknesses %}
-                    <div class="mb-2">
-                        <strong class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Zaif tomonlar:</strong>
-                        <div class="small mt-1">{{ ai_recommendation.weaknesses|linebreaks }}</div>
-                    </div>
-                    {% endif %}
-                    {% if ai_recommendation.suggestions %}
-                    <div class="mb-0">
-                        <strong class="text-info"><i class="bi bi-lightbulb me-1"></i>Takliflar:</strong>
-                        <div class="small mt-1">{{ ai_recommendation.suggestions|linebreaks }}</div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
             {% if not submission.is_graded %}
             <div class="alert alert-info d-flex align-items-center mb-4">
                 <i class="bi bi-hourglass-split me-2 fs-5"></i>

@@ -259,6 +259,23 @@ class AITeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.submission.student.username)
 
+    def test_student_assignment_detail_hides_ai_recommendation(self):
+        AIGradeRecommendation.objects.create(
+            submission=self.submission,
+            ai_score=75,
+            max_score=100,
+            confidence=0.6,
+            analysis='Internal AI analysis',
+            strengths='Strong points',
+        )
+        self.client.force_login(self.student)
+
+        response = self.client.get(reverse('assignment_detail', args=[self.assignment.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'AI tavsiya tahlili')
+        self.assertNotContains(response, 'Internal AI analysis')
+
     def test_extract_file_for_ai_reads_docx_xlsx_pptx(self):
         docx = SimpleUploadedFile(
             'task.docx',
