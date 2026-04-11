@@ -1348,11 +1348,14 @@ def teacher_course_create(request):
             course = form.save(commit=False)
             course.teacher = request.user
             course.save()
-            messages.success(request, "Kurs muvaffaqiyatli yaratildi!")
+            if course.is_published:
+                messages.success(request, "Kurs muvaffaqiyatli yaratildi va talabalar uchun nashr qilindi!")
+            else:
+                messages.warning(request, "Kurs qoralama holatda saqlandi. Talabalar uni ko'rishi uchun nashr qiling.")
             return redirect('teacher_course_edit', slug=course.slug)
         messages.error(request, "Forma xatolari bor. Majburiy maydonlarni to'ldiring.")
     else:
-        form = CourseForm()
+        form = CourseForm(initial={'is_published': True})
 
     return render(request, 'courses/teacher/course_create.html', {'form': form})
 

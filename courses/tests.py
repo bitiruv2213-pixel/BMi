@@ -349,3 +349,66 @@ class AITeacherFlowTests(TestCase):
         self.assertIn("Talaba javobi fayli", sent_prompt)
         self.assertIn('Teacher requirement content', sent_prompt)
         self.assertIn('Student answer content', sent_prompt)
+
+
+class CoursePublishingFlowTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.teacher = User.objects.create_user(username='teacher_courses', password='testpass123')
+        cls.teacher.profile.is_teacher = True
+        cls.teacher.profile.save(update_fields=['is_teacher'])
+        cls.category = Category.objects.create(name='Course Tests', slug='course-tests')
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.teacher)
+
+    def test_teacher_course_create_defaults_to_published(self):
+        response = self.client.get(reverse('teacher_course_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['form'].initial.get('is_published'))
+
+    def test_teacher_gets_warning_when_saving_draft_course(self):
+        response = self.client.post(
+            reverse('teacher_course_create'),
+            {
+                'title': 'Draft course',
+                'description': 'desc',
+                'short_description': '',
+                'category': self.category.pk,
+                'level': 'beginner',
+                'language': "O'zbek",
+                'price': 0,
+                'discount_price': '',
+                'requirements': '',
+                'what_you_learn': '',
+                'is_free': 'on',
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        messages = [str(message) for message in response.context['messages']]
+        self.assertTrue(any('qoralama holatda saqlandi' in message for message in messages))
+
+    def test_teacher_gets_success_when_saving_published_course(self):
+        response = self.client.post(
+            reverse('teacher_course_create'),
+            {
+                'title': 'Published course',
+                'description': 'desc',
+                'short_description': '',
+                'category': self.category.pk,
+                'level': 'beginner',
+                'language': "O'zbek",
+                'price': 0,
+                'discount_price': '',
+                'requirements': '',
+                'what_you_learn': '',
+                'is_free': 'on',
+                'is_published': 'on',
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        messages = [str(message) for message in response.context['messages']]
+        self.assertTrue(any('talabalar uchun nashr qilindi' in message for message in messages))
