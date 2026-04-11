@@ -140,6 +140,40 @@ def _build_fallback_ai_grade(submission, assignment, reason):
     }
 
 
+def _clamp_int(value, default, *, minimum=None, maximum=None):
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        number = default
+
+    if minimum is not None:
+        number = max(minimum, number)
+    if maximum is not None:
+        number = min(maximum, number)
+    return number
+
+
+def _clamp_float(value, default, *, minimum=None, maximum=None):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = default
+
+    if minimum is not None:
+        number = max(minimum, number)
+    if maximum is not None:
+        number = min(maximum, number)
+    return number
+
+
+def _parse_bounded_score(value, maximum):
+    try:
+        score = int(value)
+    except (TypeError, ValueError):
+        return None
+    return max(0, min(maximum, score))
+
+
 def _fallback_chat_response(message, course=None, error_type=None):
     course_text = f" '{course.title}' kursi bo'yicha" if course else ''
     guidance = (
@@ -1756,8 +1790,18 @@ MUHIM: Faqat JSON formatda javob ber, boshqa matn qo'shma!"""
         ai_data = _json.loads(response_text)
 
         return {
-            'score': int(ai_data.get('score', max_score * 0.7)),
-            'confidence': float(ai_data.get('confidence', 0.7)),
+            'score': _clamp_int(
+                ai_data.get('score', max_score * 0.7),
+                int(max_score * 0.7),
+                minimum=0,
+                maximum=max_score,
+            ),
+            'confidence': _clamp_float(
+                ai_data.get('confidence', 0.7),
+                0.7,
+                minimum=0.0,
+                maximum=1.0,
+            ),
             'analysis': ai_data.get('analysis', 'Tahlil mavjud emas'),
             'strengths': ai_data.get('strengths', ''),
             'weaknesses': ai_data.get('weaknesses', ''),
@@ -1818,8 +1862,18 @@ def teacher_grade_submission(request, pk):
             )
 
     if request.method == 'POST':
-        teacher_score = int(request.POST.get('score', 0))
-        teacher_feedback = request.POST.get('feedback', '')
+        raw_score = request.POST.get('score', '')
+        teacher_score = _parse_bounded_score(raw_score, assignment.max_score or 100)
+        teacher_feedback = request.POST.get('feedback', '').strip()
+
+        if teacher_score is None or str(raw_score).strip() == '':
+            messages.error(request, "Ball son ko'rinishida kiritilishi kerak.")
+            context = {
+                'submission': submission,
+                'assignment': assignment,
+                'ai_recommendation': ai_recommendation,
+            }
+            return render(request, 'courses/teacher/grade_submission.html', context, status=400)
 
         # Submission'ni yangilash
         submission.score = teacher_score
@@ -1880,16 +1934,17 @@ def teacher_submissions(request, slug):
     elif status == 'graded':
         submissions = submissions.filter(is_graded=True)
 
-    # AI recommendations
-    for submission in submissions:
-        try:
-            submission.ai_rec = AIGradeRecommendation.objects.get(submission=submission)
-        except:
-            submission.ai_rec = None
+    submission_list = list(submissions)
+    ai_recommendations = AIGradeRecommendation.objects.filter(
+        submission__in=submission_list
+    ).in_bulk(field_name='submission_id')
+
+    for submission in submission_list:
+        submission.ai_rec = ai_recommendations.get(submission.id)
 
     context = {
         'course': course,
-        'submissions': submissions,
+        'submissions': submission_list,
         'current_status': status,
     }
     return render(request, 'courses/teacher/submissions.html', context)

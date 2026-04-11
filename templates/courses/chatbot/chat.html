@@ -178,7 +178,7 @@
 
         <div class="chat-messages" id="chatMessages">
             <div class="welcome-message">
-                <div class="display-4 mb-3">🤖</div>
+                <div class="display-4 mb-3"><i class="bi bi-robot"></i></div>
                 <h3 class="fw-bold mb-3">AI Mentor tayyor</h3>
                 <p class="text-muted mb-0">
                     Kurs mazmuni, Django, Python, topshiriq tahlili yoki metodika bo'yicha savol yuboring.
@@ -236,11 +236,18 @@ function addMessage(text, type) {
 
     const avatar = document.createElement('div');
     avatar.className = 'message-avatar';
-    avatar.textContent = type === 'user' ? '{{ user.first_name|first|default:user.username|first|upper }}' : '🤖';
+    if (type === 'user') {
+        avatar.textContent = '{{ user.first_name|first|default:user.username|first|upper }}';
+    } else {
+        avatar.innerHTML = '<i class="bi bi-robot"></i>';
+    }
 
     const content = document.createElement('div');
     content.className = 'message-content';
-    content.innerHTML = `<div>${text.replace(/\n/g, '<br>')}</div>`;
+    const body = document.createElement('div');
+    body.style.whiteSpace = 'pre-wrap';
+    body.textContent = text;
+    content.appendChild(body);
 
     wrapper.appendChild(avatar);
     wrapper.appendChild(content);
@@ -253,7 +260,7 @@ function showTypingIndicator() {
     indicator.className = 'message ai-message';
     indicator.id = 'typingIndicator';
     indicator.innerHTML = `
-        <div class="message-avatar">🤖</div>
+        <div class="message-avatar"><i class="bi bi-robot"></i></div>
         <div class="message-content">
             <div class="typing-indicator">
                 <div class="typing-dot"></div>
@@ -299,7 +306,7 @@ async function sendMessage(event) {
         addMessage(data.response || 'Xatolik yuz berdi.', 'ai');
     } catch (error) {
         removeTypingIndicator();
-        addMessage('Xatolik yuz berdi. Iltimos, qayta urinib ko‘ring.', 'ai');
+        addMessage("Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.", 'ai');
     } finally {
         messageInput.disabled = false;
         sendButton.disabled = false;

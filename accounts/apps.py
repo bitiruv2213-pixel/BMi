@@ -5,20 +5,11 @@ class AccountsConfig(AppConfig):
     name = 'accounts'
 
     def ready(self):
-        from django.conf import settings
+        from django.db.models.signals import post_migrate
+        from .signals import ensure_default_site
 
-        # Ensure Site object exists for allauth
-        from django.db import connection
-        try:
-            table_names = connection.introspection.table_names()
-            if 'django_site' not in table_names:
-                return
-
-            from django.contrib.sites.models import Site
-
-            Site.objects.get_or_create(id=settings.SITE_ID, defaults={
-                'domain': 'lmsuzplatform.uz',
-                'name': 'LMS Platform',
-            })
-        except Exception:
-            pass
+        post_migrate.connect(
+            ensure_default_site,
+            sender=self,
+            dispatch_uid='accounts.ensure_default_site',
+        )
