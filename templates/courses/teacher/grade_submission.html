@@ -47,6 +47,17 @@
                         <strong>Ko'rsatmalar:</strong> {{ assignment.instructions }}
                     </div>
                     {% endif %}
+                    {% if assignment.attachment %}
+                    <div class="alert alert-info d-flex align-items-center mt-3 mb-0">
+                        <i class="bi bi-paperclip me-2"></i>
+                        <div>
+                            <strong>O'qituvchi ilovasi:</strong>
+                            <a href="{{ assignment.attachment.url }}" target="_blank" class="alert-link ms-1">
+                                Vazifa faylini ko'rish / yuklab olish
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 

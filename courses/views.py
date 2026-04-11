@@ -174,6 +174,168 @@ def _parse_bounded_score(value, maximum):
     return max(0, min(maximum, score))
 
 
+def _read_text_file(file_path, max_chars=8000):
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as fh:
+        return fh.read(max_chars)
+
+
+def _extract_docx_text(file_path, max_chars=8000):
+    import zipfile
+    from xml.etree import ElementTree as ET
+
+    with zipfile.ZipFile(file_path) as archive:
+        xml_bytes = archive.read('word/document.xml')
+
+    root = ET.fromstring(xml_bytes)
+    text_nodes = [node.text for node in root.iter() if node.tag.endswith('}t') and node.text]
+    return ' '.join(text_nodes)[:max_chars]
+
+
+def _extract_pptx_text(file_path, max_chars=8000):
+    import zipfile
+    from xml.etree import ElementTree as ET
+
+    collected = []
+    with zipfile.ZipFile(file_path) as archive:
+        slide_names = sorted(
+            name for name in archive.namelist()
+            if name.startswith('ppt/slides/slide') and name.endswith('.xml')
+        )
+        for slide_name in slide_names:
+            root = ET.fromstring(archive.read(slide_name))
+            slide_text = [node.text for node in root.iter() if node.tag.endswith('}t') and node.text]
+            if slide_text:
+                collected.append(' '.join(slide_text))
+
+    return '\n'.join(collected)[:max_chars]
+
+
+def _extract_xlsx_text(file_path, max_chars=8000):
+    import zipfile
+    from xml.etree import ElementTree as ET
+
+    def _cell_value(cell, shared_strings):
+        cell_type = cell.attrib.get('t')
+        value_node = next((child for child in cell if child.tag.endswith('}v') and child.text), None)
+        if value_node is None:
+            return ''
+        raw_value = value_node.text or ''
+        if cell_type == 's':
+            try:
+                return shared_strings[int(raw_value)]
+            except (ValueError, IndexError):
+                return raw_value
+        return raw_value
+
+    shared_strings = []
+    rows = []
+    with zipfile.ZipFile(file_path) as archive:
+        if 'xl/sharedStrings.xml' in archive.namelist():
+            shared_root = ET.fromstring(archive.read('xl/sharedStrings.xml'))
+            for string_item in shared_root.iter():
+                if string_item.tag.endswith('}t') and string_item.text:
+                    shared_strings.append(string_item.text)
+
+        sheet_names = sorted(
+            name for name in archive.namelist()
+            if name.startswith('xl/worksheets/sheet') and name.endswith('.xml')
+        )
+        for sheet_name in sheet_names:
+            root = ET.fromstring(archive.read(sheet_name))
+            for row in root.iter():
+                if not row.tag.endswith('}row'):
+                    continue
+                values = []
+                for cell in row:
+                    if cell.tag.endswith('}c'):
+                        value = _cell_value(cell, shared_strings)
+                        if value:
+                            values.append(value)
+                if values:
+                    rows.append(' | '.join(values))
+
+    return '\n'.join(rows)[:max_chars]
+
+
+def _build_inline_file_part(file_path, mime_type):
+    import base64 as _base64
+    import os as _os
+
+    file_size = _os.path.getsize(file_path)
+    if file_size > 10 * 1024 * 1024:
+        return None, "[Fayl juda katta, AI inline tahliliga yuborilmadi]"
+
+    with open(file_path, 'rb') as fh:
+        encoded = _base64.b64encode(fh.read()).decode('utf-8')
+    return {"inline_data": {"mime_type": mime_type, "data": encoded}}, None
+
+
+def _extract_file_for_ai(field_file, role_label, max_chars=8000):
+    import os as _os
+
+    if not field_file:
+        return {'text': '', 'parts': [], 'notes': []}
+
+    file_path = field_file.path
+    file_name = _os.path.basename(file_path)
+    file_ext = _os.path.splitext(file_name)[1].lower()
+
+    text_extensions = {
+        '.py', '.txt', '.js', '.ts', '.html', '.css', '.java',
+        '.cpp', '.c', '.h', '.cs', '.php', '.rb', '.go', '.rs',
+        '.md', '.json', '.xml', '.csv', '.sql', '.sh', '.yaml', '.yml',
+    }
+    office_text_extractors = {
+        '.docx': _extract_docx_text,
+        '.pptx': _extract_pptx_text,
+        '.xlsx': _extract_xlsx_text,
+    }
+    inline_mime = {
+        '.pdf': 'application/pdf',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+    }
+
+    try:
+        if file_ext in text_extensions:
+            file_content = _read_text_file(file_path, max_chars=max_chars)
+            return {
+                'text': f"\n\n--- {role_label} fayli: {file_name} ---\n{file_content}",
+                'parts': [],
+                'notes': [],
+            }
+
+        if file_ext in office_text_extractors:
+            file_content = office_text_extractors[file_ext](file_path, max_chars=max_chars)
+            return {
+                'text': f"\n\n--- {role_label} fayli: {file_name} ---\n{file_content}",
+                'parts': [],
+                'notes': [],
+            }
+
+        if file_ext in inline_mime:
+            inline_part, note = _build_inline_file_part(file_path, inline_mime[file_ext])
+            notes = [f"{role_label} fayli AI inline tahlilga yuborildi: {file_name}"]
+            if note:
+                return {'text': f"\n\n[{role_label} fayli inline yuborilmadi: {file_name}]", 'parts': [], 'notes': [note]}
+            return {'text': '', 'parts': [inline_part], 'notes': notes}
+
+        return {
+            'text': f"\n\n[{role_label} fayli turi hozircha to'liq qo'llab-quvvatlanmaydi: {file_name}]",
+            'parts': [],
+            'notes': [],
+        }
+    except Exception as exc:
+        return {
+            'text': f"\n\n[{role_label} faylini o'qishda xatolik: {file_name}]",
+            'parts': [],
+            'notes': [str(exc)],
+        }
+
+
 def _fallback_chat_response(message, course=None, error_type=None):
     course_text = f" '{course.title}' kursi bo'yicha" if course else ''
     guidance = (
@@ -1686,11 +1848,9 @@ def student_statistics(request):
 # ==========================================
 
 def analyze_submission_with_ai(submission, assignment):
-    """Topshiriqni AI bilan tahlil qilish va baho tavsiya etish (matn + fayl)"""
+    """Topshiriqni AI bilan tahlil qilish va baho tavsiya etish."""
     import json as _json
     import re as _re
-    import base64 as _base64
-    import os as _os
 
     api_key = getattr(settings, 'GEMINI_API_KEY', '')
 
@@ -1704,53 +1864,22 @@ def analyze_submission_with_ai(submission, assignment):
     if assignment.instructions:
         assignment_text += f"\n\nKo'rsatmalar:\n{assignment.instructions}"
 
+    teacher_file_data = _extract_file_for_ai(assignment.attachment, "O'qituvchi vazifa")
+
     # Talaba matn javobi
     submission_text = submission.content or ''
+    student_file_data = _extract_file_for_ai(submission.file, "Talaba javobi")
 
-    # Yuklangan faylni tahlil qilish
-    extra_parts = []
-    if submission.file:
-        try:
-            file_path = submission.file.path
-            file_name = _os.path.basename(file_path)
-            file_ext = _os.path.splitext(file_name)[1].lower()
-
-            text_extensions = {
-                '.py', '.txt', '.js', '.ts', '.html', '.css', '.java',
-                '.cpp', '.c', '.h', '.cs', '.php', '.rb', '.go', '.rs',
-                '.md', '.json', '.xml', '.csv', '.sql', '.sh', '.yaml', '.yml',
-            }
-            image_mime = {
-                '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-                '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp',
-            }
-
-            if file_ext in text_extensions:
-                # Matn faylini o'qib promptga qo'shish
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as fh:
-                    file_content = fh.read(6000)  # max 6000 belgi
-                submission_text += f"\n\n--- Yuklangan fayl: {file_name} ---\n{file_content}"
-
-            elif file_ext == '.pdf' or file_ext in image_mime:
-                # Rasm / PDF ni base64 qilib Gemini Vision API ga yuborish
-                file_size = _os.path.getsize(file_path)
-                if file_size <= 10 * 1024 * 1024:  # 10 MB limit
-                    with open(file_path, 'rb') as fh:
-                        encoded = _base64.b64encode(fh.read()).decode('utf-8')
-                    mime_type = 'application/pdf' if file_ext == '.pdf' else image_mime[file_ext]
-                    extra_parts.append({
-                        "inline_data": {"mime_type": mime_type, "data": encoded}
-                    })
-                else:
-                    submission_text += f"\n\n[Fayl juda katta, tahlil qilinmadi: {file_name}]"
-        except Exception as fe:
-            print(f"Fayl o'qish xatosi: {fe}")
+    assignment_text += teacher_file_data['text']
+    submission_text += student_file_data['text']
+    extra_parts = teacher_file_data['parts'] + student_file_data['parts']
+    file_notes = teacher_file_data['notes'] + student_file_data['notes']
 
     if not submission_text and not extra_parts:
         submission_text = "Matn javobi yo'q"
 
     try:
-        prompt = f"""Sen professional ta'lim o'qituvchisisisan. Talabaning topshiriqini tahlil qilib, baho tavsiya et.
+        prompt = f"""Sen professional ta'lim o'qituvchisisisan. Vazifa talablari bilan talaba javobini taqqoslab, moslik va sifat bo'yicha baho tavsiya et.
 
 TOPSHIRIQ:
 {assignment_text}
@@ -1758,13 +1887,23 @@ TOPSHIRIQ:
 Maksimal ball: {max_score}
 
 TALABA JAVOBI:
-{submission_text}{"" if not extra_parts else chr(10) + "(Qo'shimcha fayl ham ilova qilingan, uni ham tahlil qil)"}
+{submission_text}
+
+QO'SHIMCHA ESLATMA:
+{chr(10).join(file_notes) if file_notes else "Qo'shimcha eslatma yo'q"}
+
+BAHOLASH QOIDASI:
+- O'qituvchi bergan vazifa matni va ilova faylini asosiy mezon deb ol.
+- Talaba matni va ilova faylini shu mezonlarga nisbatan solishtir.
+- Javobning mavzuga mosligi, to'liqligi, aniqligi va fayldagi dalillarini tekshir.
+- Agar talaba noto'g'ri format yoki mavzudan chetga chiqqan bo'lsa ballni pasaytir.
+- Ball 0 dan {max_score} gacha bo'lsin va aynan maksimal ball mezoniga nisbatan hisobla.
 
 Quyidagi formatda javob ber (JSON):
 {{
     "score": (tavsiya etilgan ball 0-{max_score}),
     "confidence": (ishonch darajasi 0.0-1.0),
-    "analysis": "Umumiy tahlil",
+    "analysis": "O'qituvchi vazifasi bilan solishtirilgan umumiy tahlil va nechchi ballga mosligi",
     "strengths": "Kuchli tomonlar (bullet points)",
     "weaknesses": "Zaif tomonlar (bullet points)",
     "suggestions": "Yaxshilash takliflari"
