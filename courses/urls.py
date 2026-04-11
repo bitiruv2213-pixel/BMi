@@ -85,7 +85,7 @@ urlpatterns = [
     path('leaderboard/', views.leaderboard, name='leaderboard'),
     path('challenges/', views.daily_challenges, name='daily_challenges'),
 
-    # Chatbot
+    # AI Mentor
     path('chatbot/', views.chatbot_view, name='chatbot_view'),
     path('chatbot/send/', views.chatbot_send, name='chatbot_send'),
     path('chatbot/history/', views.chatbot_history, name='chatbot_history'),

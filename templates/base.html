@@ -91,6 +91,12 @@
                             <i class="bi bi-shield-lock me-1"></i>Admin paneli
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'chatbot_view' %}active{% endif %}"
+                           href="{% url 'chatbot_view' %}">
+                            <i class="bi bi-robot me-1"></i>AI Mentor
+                        </a>
+                    </li>
                     {% else %}
                     <!-- TALABA UCHUN -->
                     <li class="nav-item">
@@ -106,13 +112,15 @@
                         </a>
                     </li>
                     {% endif %}
-
+                    {% if user.profile.is_teacher %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'chatbot_view' %}active{% endif %}"
                            href="{% url 'chatbot_view' %}">
                             <i class="bi bi-robot me-1"></i>AI Mentor
                         </a>
                     </li>
+                    {% endif %}
+
                     {% endif %}
                 </ul>
 

@@ -15,7 +15,7 @@ from .models import (
     Assignment, Submission, Certificate, CourseReview,
     Discussion, Reply, Notification, Payment, PromoCode,
     Wishlist, Badge, UserBadge, UserXP, XPTransaction,
-    DailyChallenge, UserChallenge, ChatMessage, AIGradeRecommendation,
+    DailyChallenge, UserChallenge, AIGradeRecommendation,
     TypingText, CodeChallenge, GameScore, MemoryCard
 )
 from .forms import (
@@ -110,6 +110,36 @@ def _call_gemini(parts, timeout=30):
         }
 
 
+def _build_fallback_ai_grade(submission, assignment, reason):
+    max_score = assignment.max_score or 100
+    submission_text = (submission.content or '').strip()
+    has_file = bool(submission.file)
+
+    content_length = len(submission_text)
+    ratio = 0.35
+    if content_length >= 120:
+        ratio = 0.55
+    if content_length >= 400:
+        ratio = 0.7
+    if has_file:
+        ratio += 0.1
+
+    ratio = min(ratio, 0.85)
+    score = max(0, min(max_score, int(round(max_score * ratio))))
+
+    return {
+        'score': score,
+        'confidence': 0.35,
+        'analysis': (
+            "AI servis vaqtincha ishlamadi, shuning uchun taxminiy fallback tahlil yaratildi. "
+            f"Sabab: {reason[:120]}"
+        ),
+        'strengths': "Topshiriq avtomatik tarzda to'liq tahlil qilinmadi.",
+        'weaknesses': "Natija Gemini quota yoki tarmoq cheklovi sabab cheklangan.",
+        'suggestions': "Admin AI kalitini yoki billing/quota holatini tekshirsin; o'qituvchi qo'lda review qilsin.",
+    }
+
+
 def _fallback_chat_response(message, course=None, error_type=None):
     course_text = f" '{course.title}' kursi bo'yicha" if course else ''
     guidance = (
@@ -158,36 +188,6 @@ def _fallback_chat_response(message, course=None, error_type=None):
     return guidance + body
 
 
-def _build_fallback_ai_grade(submission, assignment, reason):
-    max_score = assignment.max_score or 100
-    submission_text = (submission.content or '').strip()
-    has_file = bool(submission.file)
-
-    content_length = len(submission_text)
-    ratio = 0.35
-    if content_length >= 120:
-        ratio = 0.55
-    if content_length >= 400:
-        ratio = 0.7
-    if has_file:
-        ratio += 0.1
-
-    ratio = min(ratio, 0.85)
-    score = max(0, min(max_score, int(round(max_score * ratio))))
-
-    return {
-        'score': score,
-        'confidence': 0.35,
-        'analysis': (
-            "AI servis vaqtincha ishlamadi, shuning uchun taxminiy fallback tahlil yaratildi. "
-            f"Sabab: {reason[:120]}"
-        ),
-        'strengths': "Topshiriq avtomatik tarzda to'liq tahlil qilinmadi.",
-        'weaknesses': "Natija Gemini quota yoki tarmoq cheklovi sabab cheklangan.",
-        'suggestions': "Admin AI kalitini yoki billing/quota holatini tekshirsin; o'qituvchi qo'lda review qilsin.",
-    }
-
-
 def _redirect_dashboard_for_role(request):
     role = get_role(request.user)
     if role == 'admin':
@@ -218,6 +218,13 @@ def _require_student(request):
         messages.error(request, "Bu sahifa faqat talabalar uchun!")
         return False
     return True
+
+
+def _require_ai_mentor_access(request):
+    if is_teacher(request.user) or is_admin(request.user):
+        return True
+    messages.error(request, "AI Mentor faqat o'qituvchi va admin uchun mavjud.")
+    return False
 
 
 # ==========================================
@@ -1461,7 +1468,7 @@ def generate_ai_response(message, course=None):
 Dasturlash, Django, Python va boshqa mavzularda yordam ber. Qisqa va foydali javoblar ber."""
 
     if course:
-        system_prompt += f"\n\nHozir talaba '{course.title}' kursini o'qiyapti."
+        system_prompt += f"\n\nHozir foydalanuvchi '{course.title}' kursi bilan ishlayapti."
 
     result = _call_gemini(
         [{"text": f"{system_prompt}\n\nSavol: {message}"}],
@@ -1475,6 +1482,9 @@ Dasturlash, Django, Python va boshqa mavzularda yordam ber. Qisqa va foydali jav
 
 @login_required
 def chatbot_view(request, slug=None):
+    if not _require_ai_mentor_access(request):
+        return redirect('dashboard')
+
     course = get_object_or_404(Course, slug=slug) if slug else None
 
     if request.method == 'POST':
@@ -1488,62 +1498,55 @@ def chatbot_view(request, slug=None):
 
             ai_response = generate_ai_response(message, course)
 
-            chat_message = ChatMessage.objects.create(
-                user=request.user,
-                course=course,
-                message=message,
-                response=ai_response
-            )
-
             return JsonResponse({
                 'response': ai_response,
-                'created_at': chat_message.created_at.strftime('%H:%M')
+                'created_at': timezone.now().strftime('%H:%M')
             })
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+        except Exception as exc:
+            return JsonResponse({'error': str(exc)}, status=500)
 
-    messages_list = ChatMessage.objects.filter(user=request.user).order_by('-created_at')[:20]
-    return render(request, 'courses/chatbot/chat.html', {
-        'course': course,
-        'messages': reversed(list(messages_list))
-    })
+    return render(request, 'courses/chatbot/chat.html', {'course': course})
 
 
 @login_required
 def chatbot_send(request):
-    if request.method == 'POST':
-        message = request.POST.get('message', '').strip()
-        course_slug = request.POST.get('course_slug')
+    if not _require_ai_mentor_access(request):
+        return JsonResponse({'error': "Ruxsat yo'q"}, status=403)
 
-        if not message:
-            return JsonResponse({'error': 'Xabar bo\'sh'}, status=400)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST kerak'}, status=405)
 
-        course = get_object_or_404(Course, slug=course_slug) if course_slug else None
-        ai_response = generate_ai_response(message, course)
+    message = request.POST.get('message', '').strip()
+    course_slug = request.POST.get('course_slug')
 
-        chat_message = ChatMessage.objects.create(
-            user=request.user, course=course, message=message, response=ai_response
-        )
+    if not message:
+        return JsonResponse({'error': 'Xabar bo\'sh'}, status=400)
 
-        return JsonResponse({
-            'success': True, 'message': message, 'response': ai_response,
-            'created_at': chat_message.created_at.strftime('%H:%M')
-        })
+    course = get_object_or_404(Course, slug=course_slug) if course_slug else None
+    ai_response = generate_ai_response(message, course)
 
-    return JsonResponse({'error': 'POST kerak'}, status=405)
+    return JsonResponse({
+        'success': True,
+        'message': message,
+        'response': ai_response,
+        'created_at': timezone.now().strftime('%H:%M')
+    })
 
 
 @login_required
 def chatbot_history(request):
-    messages_list = ChatMessage.objects.filter(user=request.user).order_by('-created_at')
-    paginator = Paginator(messages_list, 20)
-    return render(request, 'courses/chatbot/history.html', {'messages': paginator.get_page(request.GET.get('page'))})
+    if not _require_ai_mentor_access(request):
+        return redirect('dashboard')
+
+    return render(request, 'courses/chatbot/history.html', {'messages': []})
 
 
 @login_required
 def chatbot_clear(request):
-    ChatMessage.objects.filter(user=request.user).delete()
-    messages.success(request, "Barcha xabarlar o'chirildi!")
+    if not _require_ai_mentor_access(request):
+        return redirect('dashboard')
+
+    messages.success(request, "AI Mentor sessiyasi tozalandi.")
     return redirect('chatbot_view')
 
 

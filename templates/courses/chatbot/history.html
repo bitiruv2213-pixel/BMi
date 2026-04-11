@@ -1,70 +1,25 @@
 {% extends 'base.html' %}
-{% block title %}Chat tarixi{% endblock %}
+
+{% block title %}AI Mentor tarixi{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <div class="row">
         <div class="col-lg-8 mx-auto">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3><i class="bi bi-clock-history me-2"></i>Chat tarixi</h3>
+                <h3><i class="bi bi-clock-history me-2"></i>AI Mentor tarixi</h3>
                 <a href="{% url 'chatbot_view' %}" class="btn btn-primary">
                     <i class="bi bi-chat-dots me-2"></i>Yangi chat
                 </a>
             </div>
 
-            {% if messages %}
-            <div class="card border-0 shadow-sm">
-                <div class="list-group list-group-flush">
-                    {% for msg in messages %}
-                    <div class="list-group-item">
-                        <div class="mb-2">
-                            <span class="badge bg-primary me-2">Siz</span>
-                            <small class="text-muted">{{ msg.created_at|date:"d.m.Y H:i" }}</small>
-                        </div>
-                        <p class="mb-2">{{ msg.message }}</p>
-                        <div class="bg-light rounded p-3">
-                            <span class="badge bg-success mb-2">AI Mentor</span>
-                            <p class="mb-0 small">{{ msg.response|truncatewords:50 }}</p>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Pagination -->
-            {% if messages.has_other_pages %}
-            <nav class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if messages.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ messages.previous_page_number }}">Oldingi</a>
-                    </li>
-                    {% endif %}
-
-                    <li class="page-item disabled">
-                        <span class="page-link">{{ messages.number }} / {{ messages.paginator.num_pages }}</span>
-                    </li>
-
-                    {% if messages.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ messages.next_page_number }}">Keyingi</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-
-            {% else %}
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-5">
                     <i class="bi bi-chat-dots display-1 text-muted mb-3"></i>
-                    <h5 class="text-muted">Chat tarixi bo'sh</h5>
-                    <a href="{% url 'chatbot_view' %}" class="btn btn-primary mt-3">
-                        Chat boshlash
-                    </a>
+                    <h5 class="text-muted">Saqlangan chat tarixi yo'q</h5>
+                    <p class="text-muted mb-0">AI Mentor sessiyasi real vaqtda ishlaydi.</p>
                 </div>
             </div>
-            {% endif %}
         </div>
     </div>
 </div>

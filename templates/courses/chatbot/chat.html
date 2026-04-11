@@ -5,7 +5,6 @@
 
 {% block extra_css %}
 <style>
-/* AI Mentor Custom Styles */
 .chat-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -29,7 +28,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .chat-header-left {
@@ -49,51 +47,21 @@
     font-size: 1.5rem;
 }
 
-.ai-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    opacity: 0.9;
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    background: #10b981;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
 .chat-messages {
     flex: 1;
     overflow-y: auto;
     padding: 2rem;
     background: var(--bg-secondary);
-    scroll-behavior: smooth;
 }
 
 .message {
     display: flex;
     gap: 1rem;
     margin-bottom: 1.5rem;
-    animation: fadeInUp 0.3s ease;
 }
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.message.user-message {
+    flex-direction: row-reverse;
 }
 
 .message-avatar {
@@ -104,12 +72,6 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    font-weight: 600;
-    font-size: 1rem;
-}
-
-.message.user-message {
-    flex-direction: row-reverse;
 }
 
 .message.user-message .message-avatar {
@@ -123,11 +85,10 @@
 }
 
 .message-content {
-    max-width: 70%;
+    max-width: 75%;
     background: var(--card-bg);
     padding: 1rem 1.25rem;
     border-radius: 16px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .message.user-message .message-content {
@@ -135,60 +96,11 @@
     color: white;
 }
 
-.message-content p {
-    margin: 0;
-    line-height: 1.6;
-}
-
-.message-time {
-    font-size: 0.75rem;
-    opacity: 0.7;
-    margin-top: 0.5rem;
-}
-
 .welcome-message {
     text-align: center;
     padding: 3rem 2rem;
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
-}
-
-.welcome-message .ai-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.quick-questions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-top: 2rem;
-}
-
-.quick-question-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    padding: 1rem;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: left;
-}
-
-.quick-question-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-    border-color: var(--accent-primary);
-}
-
-.quick-question-btn i {
-    color: var(--accent-primary);
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
 }
 
 .chat-input-area {
@@ -209,16 +121,8 @@
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 0.875rem 1.25rem;
-    font-size: 1rem;
     resize: none;
     max-height: 120px;
-    transition: all 0.3s ease;
-}
-
-.chat-input:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .send-button {
@@ -228,22 +132,6 @@
     width: 50px;
     height: 50px;
     border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-}
-
-.send-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.send-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 .typing-indicator {
@@ -260,56 +148,12 @@
     animation: typing 1.4s infinite;
 }
 
-.typing-dot:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.typing-dot:nth-child(3) {
-    animation-delay: 0.4s;
-}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes typing {
-    0%, 60%, 100% {
-        transform: translateY(0);
-        opacity: 0.7;
-    }
-    30% {
-        transform: translateY(-10px);
-        opacity: 1;
-    }
-}
-
-/* Scrollbar Styling */
-.chat-messages::-webkit-scrollbar {
-    width: 8px;
-}
-
-.chat-messages::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 4px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .chat-card {
-        height: calc(100vh - 120px);
-    }
-
-    .message-content {
-        max-width: 85%;
-    }
-
-    .quick-questions {
-        grid-template-columns: 1fr;
-    }
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
+    30% { transform: translateY(-10px); opacity: 1; }
 }
 </style>
 {% endblock %}
@@ -317,7 +161,6 @@
 {% block content %}
 <div class="container py-4 chat-container">
     <div class="chat-card">
-        <!-- Chat Header -->
         <div class="chat-header">
             <div class="chat-header-left">
                 <div class="ai-avatar">
@@ -325,63 +168,24 @@
                 </div>
                 <div>
                     <h5 class="mb-0 fw-bold">AI Mentor</h5>
-                    <div class="ai-status">
-                        <span class="status-dot"></span>
-                        <span>Online</span>
-                    </div>
+                    <small>O'qituvchi va admin uchun yordamchi</small>
                 </div>
             </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-light btn-sm" onclick="clearHistory()" title="Tarixni tozalash">
-                    <i class="bi bi-clock-history"></i>
-                </button>
-                <button class="btn btn-danger btn-sm" onclick="clearChat()" title="Chatni tozalash">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </div>
+            {% if course %}
+            <span class="badge bg-light text-dark">{{ course.title }}</span>
+            {% endif %}
         </div>
 
-        <!-- Chat Messages -->
         <div class="chat-messages" id="chatMessages">
-            <!-- Welcome Message -->
             <div class="welcome-message">
-                <div class="ai-icon">🤖</div>
-                <h3 class="fw-bold mb-3">Salom! Men AI Mentor</h3>
-                <p class="text-muted mb-4">
-                    Dasturlash, Django, Python va boshqa mavzularda savollaringizga javob berish uchun shu yerdaman.
-                    Qanday yordam bera olaman?
+                <div class="display-4 mb-3">🤖</div>
+                <h3 class="fw-bold mb-3">AI Mentor tayyor</h3>
+                <p class="text-muted mb-0">
+                    Kurs mazmuni, Django, Python, topshiriq tahlili yoki metodika bo'yicha savol yuboring.
                 </p>
-
-                <!-- Quick Questions -->
-                <div class="quick-questions">
-                    <button class="quick-question-btn" onclick="sendQuickQuestion('Python nima?')">
-                        <i class="bi bi-code-slash d-block"></i>
-                        <strong class="d-block mb-1">Python nima?</strong>
-                        <small class="text-muted">Asoslarni o'rganish</small>
-                    </button>
-
-                    <button class="quick-question-btn" onclick="sendQuickQuestion('Django asoslari')">
-                        <i class="bi bi-server d-block"></i>
-                        <strong class="d-block mb-1">Django asoslari</strong>
-                        <small class="text-muted">Web development</small>
-                    </button>
-
-                    <button class="quick-question-btn" onclick="sendQuickQuestion('For loop qanday ishlaydi?')">
-                        <i class="bi bi-arrow-repeat d-block"></i>
-                        <strong class="d-block mb-1">For loop</strong>
-                        <small class="text-muted">Takrorlash sikli</small>
-                    </button>
-
-                    <button class="quick-question-btn" onclick="sendQuickQuestion('REST API nima?')">
-                        <i class="bi bi-link-45deg d-block"></i>
-                        <strong class="d-block mb-1">REST API</strong>
-                        <small class="text-muted">Backend development</small>
-                    </button>
-                </div>
             </div>
         </div>
 
-        <!-- Chat Input -->
         <div class="chat-input-area">
             <form id="chatForm" onsubmit="sendMessage(event)">
                 {% csrf_token %}
@@ -392,9 +196,9 @@
                         placeholder="Savolingizni yozing..."
                         rows="1"
                         required
-                        onkeydown="handleKeyPress(event)"></textarea>
+                    ></textarea>
                     <button type="submit" class="send-button" id="sendButton">
-                        <i class="bi bi-send-fill fs-5"></i>
+                        <i class="bi bi-send-fill"></i>
                     </button>
                 </div>
             </form>
@@ -409,80 +213,26 @@ const chatMessages = document.getElementById('chatMessages');
 const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 
-// Auto-resize textarea
 messageInput.addEventListener('input', function() {
     this.style.height = 'auto';
-    this.style.height = (this.scrollHeight) + 'px';
+    this.style.height = `${this.scrollHeight}px`;
 });
 
-// Handle Enter key
-function handleKeyPress(event) {
+messageInput.addEventListener('keydown', function(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         sendMessage(event);
     }
-}
+});
 
-// Send message
-async function sendMessage(event) {
-    event.preventDefault();
-
-    const message = messageInput.value.trim();
-    if (!message) return;
-
-    // Hide welcome message
-    const welcomeMsg = document.querySelector('.welcome-message');
-    if (welcomeMsg) welcomeMsg.remove();
-
-    // Add user message
-    addMessage(message, 'user');
-
-    // Clear input
-    messageInput.value = '';
-    messageInput.style.height = 'auto';
-
-    // Disable input
-    messageInput.disabled = true;
-    sendButton.disabled = true;
-
-    // Show typing indicator
-    showTypingIndicator();
-
-    try {
-        const response = await fetch('{% url "chatbot_view" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({ message: message })
-        });
-
-        const data = await response.json();
-
-        // Remove typing indicator
-        removeTypingIndicator();
-
-        if (data.response) {
-            addMessage(data.response, 'ai');
-        } else {
-            addMessage('Kechirasiz, xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.', 'ai');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        removeTypingIndicator();
-        addMessage('Xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.', 'ai');
-    } finally {
-        messageInput.disabled = false;
-        sendButton.disabled = false;
-        messageInput.focus();
-    }
-}
-
-// Add message to chat
 function addMessage(text, type) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}-message`;
+    const welcome = document.querySelector('.welcome-message');
+    if (welcome) {
+        welcome.remove();
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = `message ${type}-message`;
 
     const avatar = document.createElement('div');
     avatar.className = 'message-avatar';
@@ -490,20 +240,14 @@ function addMessage(text, type) {
 
     const content = document.createElement('div');
     content.className = 'message-content';
-    content.innerHTML = `
-        <p>${text.replace(/\n/g, '<br>')}</p>
-        <div class="message-time">${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}</div>
-    `;
+    content.innerHTML = `<div>${text.replace(/\n/g, '<br>')}</div>`;
 
-    messageDiv.appendChild(avatar);
-    messageDiv.appendChild(content);
-    chatMessages.appendChild(messageDiv);
-
-    // Scroll to bottom
+    wrapper.appendChild(avatar);
+    wrapper.appendChild(content);
+    chatMessages.appendChild(wrapper);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Show typing indicator
 function showTypingIndicator() {
     const indicator = document.createElement('div');
     indicator.className = 'message ai-message';
@@ -522,59 +266,45 @@ function showTypingIndicator() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Remove typing indicator
 function removeTypingIndicator() {
     const indicator = document.getElementById('typingIndicator');
-    if (indicator) indicator.remove();
-}
-
-// Quick question
-function sendQuickQuestion(question) {
-    messageInput.value = question;
-    sendMessage(new Event('submit'));
-}
-
-// Clear chat
-function clearChat() {
-    if (confirm('Chatni tozalamoqchimisiz?')) {
-        chatMessages.innerHTML = `
-            <div class="welcome-message">
-                <div class="ai-icon">🤖</div>
-                <h3 class="fw-bold mb-3">Salom! Men AI Mentor</h3>
-                <p class="text-muted mb-4">
-                    Dasturlash, Django, Python va boshqa mavzularda savollaringizga javob berish uchun shu yerdaman.
-                    Qanday yordam bera olaman?
-                </p>
-                <div class="quick-questions">
-                    <button class="quick-question-btn" onclick="sendQuickQuestion('Python nima?')">
-                        <i class="bi bi-code-slash d-block"></i>
-                        <strong class="d-block mb-1">Python nima?</strong>
-                        <small class="text-muted">Asoslarni o'rganish</small>
-                    </button>
-                    <button class="quick-question-btn" onclick="sendQuickQuestion('Django asoslari')">
-                        <i class="bi bi-server d-block"></i>
-                        <strong class="d-block mb-1">Django asoslari</strong>
-                        <small class="text-muted">Web development</small>
-                    </button>
-                    <button class="quick-question-btn" onclick="sendQuickQuestion('For loop qanday ishlaydi?')">
-                        <i class="bi bi-arrow-repeat d-block"></i>
-                        <strong class="d-block mb-1">For loop</strong>
-                        <small class="text-muted">Takrorlash sikli</small>
-                    </button>
-                    <button class="quick-question-btn" onclick="sendQuickQuestion('REST API nima?')">
-                        <i class="bi bi-link-45deg d-block"></i>
-                        <strong class="d-block mb-1">REST API</strong>
-                        <small class="text-muted">Backend development</small>
-                    </button>
-                </div>
-            </div>
-        `;
+    if (indicator) {
+        indicator.remove();
     }
 }
 
-// Clear history
-function clearHistory() {
-    alert('Tarix tozalash funksiyasi tez orada qo\'shiladi!');
+async function sendMessage(event) {
+    event.preventDefault();
+    const message = messageInput.value.trim();
+    if (!message) return;
+
+    addMessage(message, 'user');
+    messageInput.value = '';
+    messageInput.style.height = 'auto';
+    messageInput.disabled = true;
+    sendButton.disabled = true;
+    showTypingIndicator();
+
+    try {
+        const response = await fetch('{% url "chatbot_view" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ message: message })
+        });
+        const data = await response.json();
+        removeTypingIndicator();
+        addMessage(data.response || 'Xatolik yuz berdi.', 'ai');
+    } catch (error) {
+        removeTypingIndicator();
+        addMessage('Xatolik yuz berdi. Iltimos, qayta urinib ko‘ring.', 'ai');
+    } finally {
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+        messageInput.focus();
+    }
 }
 </script>
 {% endblock %}
