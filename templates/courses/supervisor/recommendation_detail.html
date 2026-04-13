@@ -33,6 +33,10 @@
                             <small class="text-muted">Yuborilgan: {{ submission.submitted_at|date:"d M Y, H:i" }}</small>
                             <br>
                             <small class="text-muted">Baholangan: {{ recommendation.reviewed_at|date:"d M Y, H:i" }}</small>
+                            {% if recommendation.supervisor_reviewed_at %}
+                            <br>
+                            <small class="text-muted">Supervisor review: {{ recommendation.supervisor_reviewed_at|date:"d M Y, H:i" }}</small>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -78,6 +82,15 @@
                             </div>
                         </div>
                     </div>
+                    <div class="mt-3 d-flex flex-wrap gap-2">
+                        <span class="badge bg-secondary">Status: {{ recommendation.get_supervisor_status_display }}</span>
+                        {% if recommendation.supervisor_score is not None %}
+                        <span class="badge bg-info text-dark">Yakuniy ball: {{ recommendation.supervisor_score }}</span>
+                        {% endif %}
+                        {% if recommendation.supervisor_reviewer %}
+                        <span class="badge bg-light text-dark">Reviewer: {{ recommendation.supervisor_reviewer.username }}</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -89,18 +102,18 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if submission.file_response %}
+                    {% if submission.file %}
                     <div class="alert alert-info">
                         <i class="bi bi-file-earmark me-2"></i>
-                        <a href="{{ submission.file_response.url }}" target="_blank" class="alert-link">
+                        <a href="{{ submission.file.url }}" target="_blank" class="alert-link">
                             Yuklangan fayl
                         </a>
                     </div>
                     {% endif %}
                     
-                    {% if submission.text_response %}
+                    {% if submission.content %}
                     <div class="border rounded p-3" style="background: var(--bg-secondary); max-height: 400px; overflow-y: auto;">
-                        <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ submission.text_response }}</pre>
+                        <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ submission.content }}</pre>
                     </div>
                     {% else %}
                     <p class="text-muted">Matn javobi yo'q</p>
@@ -168,6 +181,41 @@
                     {% else %}
                     <p class="text-muted small mb-0">Izoh qoldirilmagan</p>
                     {% endif %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-dark text-white py-3">
+                    <h6 class="mb-0">
+                        <i class="bi bi-shield-check me-2"></i>Supervisor Qarori
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="vstack gap-3">
+                        {% csrf_token %}
+                        <div>
+                            <label for="id_supervisor_comment" class="form-label">Izoh</label>
+                            <textarea id="id_supervisor_comment" name="supervisor_comment" rows="4" class="form-control"
+                                      placeholder="Supervisor izohi yoki qayta ko'rish sababi">{{ recommendation.supervisor_comment }}</textarea>
+                        </div>
+                        <div>
+                            <label for="id_override_score" class="form-label">Override ball</label>
+                            <input id="id_override_score" type="number" name="override_score" class="form-control"
+                                   min="0" max="{{ assignment.max_score }}" value="{{ recommendation.supervisor_score|default_if_none:'' }}">
+                            <div class="form-text">Faqat bahoni o'zgartirish kerak bo'lsa to'ldiring. Maksimal ball: {{ assignment.max_score }}</div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="action" value="approve" class="btn btn-success">
+                                <i class="bi bi-check2-circle me-2"></i>O'qituvchi bahosini tasdiqlash
+                            </button>
+                            <button type="submit" name="action" value="request_review" class="btn btn-outline-warning">
+                                <i class="bi bi-arrow-repeat me-2"></i>Qayta ko'rib chiqishga yuborish
+                            </button>
+                            <button type="submit" name="action" value="override" class="btn btn-outline-danger">
+                                <i class="bi bi-pencil-square me-2"></i>Yakuniy bahoni o'zgartirish
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

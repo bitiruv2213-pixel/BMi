@@ -771,6 +771,17 @@ class TelegramUser(models.Model):
 
 class AIGradeRecommendation(models.Model):
     """AI tomonidan topshiriq uchun tavsiya etilgan baho"""
+    SUPERVISOR_STATUS_PENDING = 'pending'
+    SUPERVISOR_STATUS_APPROVED = 'approved'
+    SUPERVISOR_STATUS_NEEDS_REVIEW = 'needs_review'
+    SUPERVISOR_STATUS_OVERRIDDEN = 'overridden'
+    SUPERVISOR_STATUS_CHOICES = [
+        (SUPERVISOR_STATUS_PENDING, 'Kutilmoqda'),
+        (SUPERVISOR_STATUS_APPROVED, 'Tasdiqlandi'),
+        (SUPERVISOR_STATUS_NEEDS_REVIEW, "Qayta ko'rib chiqish"),
+        (SUPERVISOR_STATUS_OVERRIDDEN, "Supervisor o'zgartirdi"),
+    ]
+
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='ai_recommendation')
 
     # AI tahlili
@@ -791,10 +802,30 @@ class AIGradeRecommendation(models.Model):
     # Farq tahlili
     score_difference = models.IntegerField(default=0, help_text="AI va o'qituvchi baho farqi")
     is_reviewed = models.BooleanField(default=False, help_text="O'qituvchi ko'rib chiqdi")
+    supervisor_status = models.CharField(
+        max_length=20,
+        choices=SUPERVISOR_STATUS_CHOICES,
+        default=SUPERVISOR_STATUS_PENDING,
+        help_text="Supervisor qarori holati",
+    )
+    supervisor_comment = models.TextField(blank=True, help_text="Supervisor izohi")
+    supervisor_score = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Supervisor tasdiqlagan yakuniy ball",
+    )
+    supervisor_reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='supervisor_reviews',
+    )
 
     # Vaqt
     created_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
+    supervisor_reviewed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "AI Baho Tavsiyasi"
@@ -809,6 +840,12 @@ class AIGradeRecommendation(models.Model):
         if self.teacher_score:
             self.score_difference = abs(self.teacher_score - self.ai_score)
             self.save()
+
+    @property
+    def final_score(self):
+        if self.supervisor_score is not None:
+            return self.supervisor_score
+        return self.teacher_score
 
 
 # ========================================

@@ -84,6 +84,12 @@
                     </li>
                     {% elif user.profile.is_supervisor %}
                     <!-- NAZORATCHI UCHUN -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'supervisor_dashboard' %}active{% endif %}"
+                           href="{% url 'supervisor_dashboard' %}">
+                            <i class="bi bi-shield-check me-1"></i>Nazoratchi paneli
+                        </a>
+                    </li>
                     {% elif user.is_staff or user.is_superuser %}
                     <!-- ADMIN UCHUN -->
                     <li class="nav-item">

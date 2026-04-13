@@ -124,6 +124,18 @@
                 <a href="?" class="btn btn-sm filter-link {% if not current_filter %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
                     Barchasi
                 </a>
+                <a href="?filter=pending" class="btn btn-sm filter-link {% if current_filter == 'pending' %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
+                    Kutilmoqda
+                </a>
+                <a href="?filter=approved" class="btn btn-sm filter-link {% if current_filter == 'approved' %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
+                    Tasdiqlangan
+                </a>
+                <a href="?filter=needs_review" class="btn btn-sm filter-link {% if current_filter == 'needs_review' %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
+                    Qayta ko'rish
+                </a>
+                <a href="?filter=overridden" class="btn btn-sm filter-link {% if current_filter == 'overridden' %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
+                    O'zgartirilgan
+                </a>
                 <a href="?filter=high_difference" class="btn btn-sm filter-link {% if current_filter == 'high_difference' %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
                     Katta farq (20+)
                 </a>
@@ -162,6 +174,34 @@
                     <p class="metric-label">O'rtacha farq</p>
                 </div>
             </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card p-3">
+                    <span class="metric-icon text-light"><i class="bi bi-hourglass-split"></i></span>
+                    <p class="metric-value">{{ pending_reviews }}</p>
+                    <p class="metric-label">Kutilayotgan review</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card p-3">
+                    <span class="metric-icon text-success"><i class="bi bi-check2-circle"></i></span>
+                    <p class="metric-value">{{ approved_reviews }}</p>
+                    <p class="metric-label">Tasdiqlangan</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card p-3">
+                    <span class="metric-icon text-danger"><i class="bi bi-arrow-repeat"></i></span>
+                    <p class="metric-value">{{ flagged_reviews }}</p>
+                    <p class="metric-label">Qayta ko'rish</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card p-3">
+                    <span class="metric-icon text-info"><i class="bi bi-pencil-square"></i></span>
+                    <p class="metric-value">{{ overridden_reviews }}</p>
+                    <p class="metric-label">O'zgartirilgan</p>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -181,6 +221,7 @@
                                 <th class="border-0">Topshiriq</th>
                                 <th class="border-0">AI</th>
                                 <th class="border-0">O'qituvchi</th>
+                                <th class="border-0">Supervisor</th>
                                 <th class="border-0">Farq</th>
                                 <th class="border-0 text-end">Amallar</th>
                             </tr>
@@ -212,6 +253,17 @@
                                     <span class="score-chip score-good">{{ rec.teacher_score }}</span>
                                 </td>
                                 <td>
+                                    {% if rec.supervisor_status == 'approved' %}
+                                    <span class="score-chip score-good">Tasdiq</span>
+                                    {% elif rec.supervisor_status == 'needs_review' %}
+                                    <span class="score-chip score-high">Qayta ko'rish</span>
+                                    {% elif rec.supervisor_status == 'overridden' %}
+                                    <span class="score-chip score-mid">{{ rec.supervisor_score }}</span>
+                                    {% else %}
+                                    <span class="score-chip score-mid">Kutilmoqda</span>
+                                    {% endif %}
+                                </td>
+                                <td>
                                     {% if rec.score_difference >= 20 %}
                                     <span class="score-chip score-high">+{{ rec.score_difference }}</span>
                                     {% elif rec.score_difference >= 10 %}
@@ -229,7 +281,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="6" class="text-center py-4">
+                                <td colspan="7" class="text-center py-4">
                                     <p class="text-muted mb-0">Hozircha ma'lumot topilmadi</p>
                                 </td>
                             </tr>

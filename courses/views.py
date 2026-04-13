@@ -409,6 +409,14 @@ def _require_supervisor(request):
     return True
 
 
+def _reset_supervisor_review(ai_recommendation):
+    ai_recommendation.supervisor_status = AIGradeRecommendation.SUPERVISOR_STATUS_PENDING
+    ai_recommendation.supervisor_comment = ''
+    ai_recommendation.supervisor_score = None
+    ai_recommendation.supervisor_reviewer = None
+    ai_recommendation.supervisor_reviewed_at = None
+
+
 def _require_student(request):
     if get_role(request.user) != 'student':
         messages.error(request, "Bu sahifa faqat talabalar uchun!")
@@ -2027,6 +2035,7 @@ def teacher_grade_submission(request, pk):
             ai_recommendation.teacher_feedback = teacher_feedback
             ai_recommendation.is_reviewed = True
             ai_recommendation.reviewed_at = timezone.now()
+            _reset_supervisor_review(ai_recommendation)
             ai_recommendation.calculate_difference()
             ai_recommendation.save()
 
@@ -2096,27 +2105,37 @@ def supervisor_dashboard(request):
     if not _require_supervisor(request):
         return redirect('dashboard')
 
-    # Barcha AI recommendations
-    recommendations = AIGradeRecommendation.objects.filter(
-        is_reviewed=True
-    ).select_related(
+    base_recommendations = AIGradeRecommendation.objects.filter(is_reviewed=True).select_related(
         'submission',
         'submission__student',
         'submission__assignment',
         'submission__assignment__lesson__course__teacher'
     ).order_by('-reviewed_at')
+    recommendations = base_recommendations
 
     # Statistika
-    total_graded = recommendations.count()
-    avg_ai_score = recommendations.aggregate(avg=Avg('ai_score'))['avg'] or 0
-    avg_teacher_score = recommendations.aggregate(avg=Avg('teacher_score'))['avg'] or 0
-    avg_difference = recommendations.aggregate(avg=Avg('score_difference'))['avg'] or 0
+    total_graded = base_recommendations.count()
+    avg_ai_score = base_recommendations.aggregate(avg=Avg('ai_score'))['avg'] or 0
+    avg_teacher_score = base_recommendations.aggregate(avg=Avg('teacher_score'))['avg'] or 0
+    avg_difference = base_recommendations.aggregate(avg=Avg('score_difference'))['avg'] or 0
+    pending_reviews = base_recommendations.filter(
+        supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_PENDING
+    ).count()
+    approved_reviews = base_recommendations.filter(
+        supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_APPROVED
+    ).count()
+    flagged_reviews = base_recommendations.filter(
+        supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_NEEDS_REVIEW
+    ).count()
+    overridden_reviews = base_recommendations.filter(
+        supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_OVERRIDDEN
+    ).count()
 
     # Katta farq bo'lgan topshiriqlar
-    large_differences = recommendations.filter(score_difference__gte=20).order_by('-score_difference')[:10]
+    large_differences = base_recommendations.filter(score_difference__gte=20).order_by('-score_difference')[:10]
 
     # O'qituvchilar bo'yicha statistika
-    teacher_stats = recommendations.values(
+    teacher_stats = base_recommendations.values(
         'submission__assignment__lesson__course__teacher__username',
         'submission__assignment__lesson__course__teacher__first_name',
         'submission__assignment__lesson__course__teacher__last_name',
@@ -2133,6 +2152,22 @@ def supervisor_dashboard(request):
         recommendations = recommendations.filter(score_difference__gte=20)
     elif filter_type == 'low_difference':
         recommendations = recommendations.filter(score_difference__lt=10)
+    elif filter_type == 'pending':
+        recommendations = recommendations.filter(
+            supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_PENDING
+        )
+    elif filter_type == 'approved':
+        recommendations = recommendations.filter(
+            supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_APPROVED
+        )
+    elif filter_type == 'needs_review':
+        recommendations = recommendations.filter(
+            supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_NEEDS_REVIEW
+        )
+    elif filter_type == 'overridden':
+        recommendations = recommendations.filter(
+            supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_OVERRIDDEN
+        )
 
     # Paginate
     paginator = Paginator(recommendations, 20)
@@ -2145,6 +2180,10 @@ def supervisor_dashboard(request):
         'avg_ai_score': round(avg_ai_score, 1),
         'avg_teacher_score': round(avg_teacher_score, 1),
         'avg_difference': round(avg_difference, 1),
+        'pending_reviews': pending_reviews,
+        'approved_reviews': approved_reviews,
+        'flagged_reviews': flagged_reviews,
+        'overridden_reviews': overridden_reviews,
         'large_differences': large_differences,
         'teacher_stats': teacher_stats,
         'current_filter': filter_type,
@@ -2165,15 +2204,103 @@ def supervisor_recommendation_detail(request, pk):
             'submission',
             'submission__student',
             'submission__assignment',
-            'submission__assignment__lesson__course__teacher'
+            'submission__assignment__lesson__course__teacher',
+            'supervisor_reviewer',
         ),
         pk=pk
     )
 
+    submission = recommendation.submission
+    assignment = submission.assignment
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        comment = (request.POST.get('supervisor_comment') or '').strip()
+        recommendation.supervisor_comment = comment
+        recommendation.supervisor_reviewer = request.user
+        recommendation.supervisor_reviewed_at = timezone.now()
+
+        if action == 'approve':
+            recommendation.supervisor_status = AIGradeRecommendation.SUPERVISOR_STATUS_APPROVED
+            recommendation.supervisor_score = recommendation.teacher_score
+            recommendation.save(update_fields=[
+                'supervisor_status', 'supervisor_score', 'supervisor_comment',
+                'supervisor_reviewer', 'supervisor_reviewed_at',
+            ])
+            messages.success(request, "Supervisor qarori saqlandi: baho tasdiqlandi.")
+            return redirect('supervisor_recommendation_detail', pk=pk)
+
+        if action == 'request_review':
+            recommendation.supervisor_status = AIGradeRecommendation.SUPERVISOR_STATUS_NEEDS_REVIEW
+            recommendation.supervisor_score = None
+            recommendation.save(update_fields=[
+                'supervisor_status', 'supervisor_score', 'supervisor_comment',
+                'supervisor_reviewer', 'supervisor_reviewed_at',
+            ])
+            Notification.objects.create(
+                recipient=assignment.lesson.course.teacher,
+                title="Supervisor qayta ko'rib chiqishni so'radi",
+                message=(
+                    f"{submission.student.username} uchun '{assignment.title}' topshirig'i "
+                    "qayta ko'rib chiqishga yuborildi."
+                    + (f" Izoh: {comment}" if comment else "")
+                ),
+                notification_type='system',
+                link=f"/teacher/submission/{submission.pk}/grade/",
+            )
+            messages.warning(request, "Topshiriq qayta ko'rib chiqish uchun o'qituvchiga yuborildi.")
+            return redirect('supervisor_recommendation_detail', pk=pk)
+
+        if action == 'override':
+            raw_score = request.POST.get('override_score')
+            override_score = _parse_bounded_score(raw_score, assignment.max_score or recommendation.max_score or 100)
+            if override_score is None or str(raw_score).strip() == '':
+                messages.error(request, "Supervisor balli noto'g'ri kiritildi.")
+                return redirect('supervisor_recommendation_detail', pk=pk)
+
+            recommendation.supervisor_status = AIGradeRecommendation.SUPERVISOR_STATUS_OVERRIDDEN
+            recommendation.supervisor_score = override_score
+            recommendation.save(update_fields=[
+                'supervisor_status', 'supervisor_score', 'supervisor_comment',
+                'supervisor_reviewer', 'supervisor_reviewed_at',
+            ])
+
+            submission.score = override_score
+            if comment:
+                base_feedback = recommendation.teacher_feedback or submission.feedback or ''
+                submission.feedback = (base_feedback + f"\n\n[Supervisor izohi] {comment}").strip()
+            submission.save(update_fields=['score', 'feedback'])
+
+            Notification.objects.create(
+                recipient=assignment.lesson.course.teacher,
+                title="Supervisor bahoni o'zgartirdi",
+                message=(
+                    f"{submission.student.username} uchun '{assignment.title}' topshirig'i bo'yicha "
+                    f"yakuniy ball {override_score}/{assignment.max_score} etib belgilandi."
+                ),
+                notification_type='system',
+                link=f"/teacher/submission/{submission.pk}/grade/",
+            )
+            Notification.objects.create(
+                recipient=submission.student,
+                title="Topshiriq bahosi supervisor tomonidan yangilandi",
+                message=(
+                    f"'{assignment.title}' topshirig'i uchun yangi yakuniy baho: "
+                    f"{override_score}/{assignment.max_score}."
+                ),
+                notification_type='grade',
+                link=f"/assignment/{assignment.pk}/",
+            )
+            messages.success(request, "Yakuniy baho supervisor tomonidan yangilandi.")
+            return redirect('supervisor_recommendation_detail', pk=pk)
+
+        messages.error(request, "Noma'lum amal.")
+        return redirect('supervisor_recommendation_detail', pk=pk)
+
     context = {
         'recommendation': recommendation,
-        'submission': recommendation.submission,
-        'assignment': recommendation.submission.assignment,
+        'submission': submission,
+        'assignment': assignment,
     }
     return render(request, 'courses/supervisor/recommendation_detail.html', context)
 

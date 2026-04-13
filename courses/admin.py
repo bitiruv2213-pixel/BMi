@@ -340,10 +340,13 @@ class TelegramUserAdmin(admin.ModelAdmin):
 # ========================================
 @admin.register(AIGradeRecommendation)
 class AIGradeRecommendationAdmin(admin.ModelAdmin):
-    list_display = ['submission_student', 'submission_assignment', 'ai_score', 'teacher_score', 'score_difference', 'is_reviewed', 'created_at']
-    list_filter = ['is_reviewed', 'created_at']
+    list_display = [
+        'submission_student', 'submission_assignment', 'ai_score', 'teacher_score',
+        'supervisor_score', 'supervisor_status', 'score_difference', 'is_reviewed', 'created_at',
+    ]
+    list_filter = ['is_reviewed', 'supervisor_status', 'created_at']
     search_fields = ['submission__student__username', 'submission__assignment__title']
-    readonly_fields = ['created_at', 'reviewed_at']
+    readonly_fields = ['created_at', 'reviewed_at', 'supervisor_reviewed_at']
 
     def submission_student(self, obj):
         return obj.submission.student.username

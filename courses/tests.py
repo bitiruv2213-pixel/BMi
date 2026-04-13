@@ -10,7 +10,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from .models import AIGradeRecommendation, Assignment, Category, Course, Lesson, Submission
+from .models import AIGradeRecommendation, Assignment, Category, Course, Lesson, Notification, Submission
 from .views import (
     _extract_file_for_ai,
     analyze_submission_with_ai,
@@ -125,6 +125,9 @@ class AITeacherFlowTests(TestCase):
             email='admin@example.com',
             password='testpass123',
         )
+        cls.supervisor = User.objects.create_user(username='supervisor_ai', password='testpass123')
+        cls.supervisor.profile.is_supervisor = True
+        cls.supervisor.profile.save(update_fields=['is_supervisor'])
         cls.student = User.objects.create_user(username='student_ai', password='testpass123')
 
         cls.category = Category.objects.create(name='Tests', slug='tests')
@@ -258,6 +261,144 @@ class AITeacherFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.submission.student.username)
+
+    def test_supervisor_dashboard_requires_supervisor_role(self):
+        self.client.force_login(self.supervisor)
+        response = self.client.get(reverse('supervisor_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Nazoratchi Paneli')
+
+    def test_supervisor_can_approve_teacher_score(self):
+        recommendation = AIGradeRecommendation.objects.create(
+            submission=self.submission,
+            ai_score=68,
+            max_score=100,
+            confidence=0.8,
+            analysis='Review needed',
+            teacher_score=72,
+            teacher_feedback='Teacher feedback',
+            is_reviewed=True,
+        )
+        self.client.force_login(self.supervisor)
+
+        response = self.client.post(
+            reverse('supervisor_recommendation_detail', args=[recommendation.pk]),
+            {'action': 'approve', 'supervisor_comment': 'Mos keladi.'},
+            follow=True,
+        )
+
+        recommendation.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            recommendation.supervisor_status,
+            AIGradeRecommendation.SUPERVISOR_STATUS_APPROVED,
+        )
+        self.assertEqual(recommendation.supervisor_score, 72)
+        self.assertEqual(recommendation.supervisor_reviewer, self.supervisor)
+
+    def test_supervisor_can_request_regrade(self):
+        recommendation = AIGradeRecommendation.objects.create(
+            submission=self.submission,
+            ai_score=50,
+            max_score=100,
+            confidence=0.5,
+            analysis='Mismatch',
+            teacher_score=90,
+            teacher_feedback='Teacher feedback',
+            is_reviewed=True,
+        )
+        self.client.force_login(self.supervisor)
+
+        response = self.client.post(
+            reverse('supervisor_recommendation_detail', args=[recommendation.pk]),
+            {'action': 'request_review', 'supervisor_comment': 'Farq juda katta.'},
+            follow=True,
+        )
+
+        recommendation.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            recommendation.supervisor_status,
+            AIGradeRecommendation.SUPERVISOR_STATUS_NEEDS_REVIEW,
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.teacher,
+                title="Supervisor qayta ko'rib chiqishni so'radi",
+            ).exists()
+        )
+
+    def test_supervisor_can_override_final_score(self):
+        recommendation = AIGradeRecommendation.objects.create(
+            submission=self.submission,
+            ai_score=78,
+            max_score=100,
+            confidence=0.8,
+            analysis='Needs override',
+            teacher_score=90,
+            teacher_feedback='Teacher feedback',
+            is_reviewed=True,
+        )
+        self.submission.score = 90
+        self.submission.feedback = 'Teacher feedback'
+        self.submission.is_graded = True
+        self.submission.save(update_fields=['score', 'feedback', 'is_graded'])
+        self.client.force_login(self.supervisor)
+
+        response = self.client.post(
+            reverse('supervisor_recommendation_detail', args=[recommendation.pk]),
+            {
+                'action': 'override',
+                'override_score': '81',
+                'supervisor_comment': 'Final score corrected.',
+            },
+            follow=True,
+        )
+
+        recommendation.refresh_from_db()
+        self.submission.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            recommendation.supervisor_status,
+            AIGradeRecommendation.SUPERVISOR_STATUS_OVERRIDDEN,
+        )
+        self.assertEqual(recommendation.supervisor_score, 81)
+        self.assertEqual(self.submission.score, 81)
+        self.assertIn('Supervisor izohi', self.submission.feedback)
+
+    def test_teacher_regrade_resets_supervisor_decision(self):
+        recommendation = AIGradeRecommendation.objects.create(
+            submission=self.submission,
+            ai_score=65,
+            max_score=100,
+            confidence=0.7,
+            analysis='Reset test',
+            teacher_score=70,
+            teacher_feedback='Old teacher feedback',
+            is_reviewed=True,
+            supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_APPROVED,
+            supervisor_comment='Approved before',
+            supervisor_score=70,
+            supervisor_reviewer=self.supervisor,
+        )
+        self.client.force_login(self.teacher)
+
+        response = self.client.post(
+            reverse('teacher_grade_submission', args=[self.submission.pk]),
+            {'score': '74', 'feedback': 'Updated teacher feedback'},
+            follow=True,
+        )
+
+        recommendation.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            recommendation.supervisor_status,
+            AIGradeRecommendation.SUPERVISOR_STATUS_PENDING,
+        )
+        self.assertIsNone(recommendation.supervisor_score)
+        self.assertEqual(recommendation.supervisor_comment, '')
+        self.assertIsNone(recommendation.supervisor_reviewer)
 
     def test_student_assignment_detail_hides_ai_recommendation(self):
         AIGradeRecommendation.objects.create(
