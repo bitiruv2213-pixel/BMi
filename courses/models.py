@@ -874,7 +874,7 @@ class AIGradeRecommendation(models.Model):
             self.DIFFERENCE_LEVEL_SMALL: 'Kichik farq',
             self.DIFFERENCE_LEVEL_MEDIUM: "O'rta farq",
             self.DIFFERENCE_LEVEL_LARGE: 'Katta farq',
-            self.DIFFERENCE_LEVEL_CRITICAL: 'Kritik farq',
+            self.DIFFERENCE_LEVEL_CRITICAL: 'Katta farq',
         }
         return labels[self.difference_level]
 

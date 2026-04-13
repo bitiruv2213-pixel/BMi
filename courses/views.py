@@ -2140,7 +2140,6 @@ def supervisor_dashboard(request):
     small_differences = sum(1 for rec in base_recommendations if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_SMALL)
     medium_differences = sum(1 for rec in base_recommendations if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_MEDIUM)
     large_differences_count = sum(1 for rec in base_recommendations if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_LARGE)
-    critical_differences = sum(1 for rec in base_recommendations if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_CRITICAL)
 
     # Har bir baho uchun max_score ga nisbatan individual farq tahlili
     large_differences = [
@@ -2202,11 +2201,6 @@ def supervisor_dashboard(request):
             rec for rec in recommendations
             if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_MEDIUM
         ]
-    elif filter_type == 'critical_difference':
-        recommendations = [
-            rec for rec in recommendations
-            if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_CRITICAL
-        ]
     elif filter_type == 'pending':
         recommendations = [
             rec for rec in recommendations
@@ -2246,7 +2240,6 @@ def supervisor_dashboard(request):
         'small_differences': small_differences,
         'medium_differences': medium_differences,
         'large_differences_count': large_differences_count,
-        'critical_differences': critical_differences,
         'large_differences': large_differences,
         'teacher_stats': teacher_stats,
         'current_filter': filter_type,
