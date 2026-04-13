@@ -400,6 +400,46 @@ class AITeacherFlowTests(TestCase):
         self.assertEqual(recommendation.supervisor_comment, '')
         self.assertIsNone(recommendation.supervisor_reviewer)
 
+    def test_difference_level_uses_score_percentage_per_submission(self):
+        small_scale = AIGradeRecommendation.objects.create(
+            submission=self.submission,
+            ai_score=80,
+            max_score=100,
+            confidence=0.7,
+            analysis='A',
+            teacher_score=68,
+            is_reviewed=True,
+            score_difference=12,
+        )
+
+        second_assignment = Assignment.objects.create(
+            lesson=self.lesson,
+            title='Large scale assignment',
+            description='desc',
+            instructions='instr',
+            max_score=200,
+        )
+        second_submission = Submission.objects.create(
+            student=self.student,
+            assignment=second_assignment,
+            content='response',
+        )
+        large_scale = AIGradeRecommendation.objects.create(
+            submission=second_submission,
+            ai_score=160,
+            max_score=200,
+            confidence=0.7,
+            analysis='B',
+            teacher_score=148,
+            is_reviewed=True,
+            score_difference=12,
+        )
+
+        self.assertEqual(small_scale.difference_level, AIGradeRecommendation.DIFFERENCE_LEVEL_MEDIUM)
+        self.assertEqual(large_scale.difference_level, AIGradeRecommendation.DIFFERENCE_LEVEL_SMALL)
+        self.assertEqual(small_scale.difference_percent, 12.0)
+        self.assertEqual(large_scale.difference_percent, 6.0)
+
     def test_student_assignment_detail_hides_ai_recommendation(self):
         AIGradeRecommendation.objects.create(
             submission=self.submission,

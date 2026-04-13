@@ -2105,69 +2105,128 @@ def supervisor_dashboard(request):
     if not _require_supervisor(request):
         return redirect('dashboard')
 
-    base_recommendations = AIGradeRecommendation.objects.filter(is_reviewed=True).select_related(
+    base_queryset = AIGradeRecommendation.objects.filter(is_reviewed=True).select_related(
         'submission',
         'submission__student',
         'submission__assignment',
         'submission__assignment__lesson__course__teacher'
     ).order_by('-reviewed_at')
-    recommendations = base_recommendations
+    base_recommendations = list(base_queryset)
+    recommendations = list(base_recommendations)
 
     # Statistika
-    total_graded = base_recommendations.count()
-    avg_ai_score = base_recommendations.aggregate(avg=Avg('ai_score'))['avg'] or 0
-    avg_teacher_score = base_recommendations.aggregate(avg=Avg('teacher_score'))['avg'] or 0
-    avg_difference = base_recommendations.aggregate(avg=Avg('score_difference'))['avg'] or 0
-    pending_reviews = base_recommendations.filter(
-        supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_PENDING
-    ).count()
-    approved_reviews = base_recommendations.filter(
-        supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_APPROVED
-    ).count()
-    flagged_reviews = base_recommendations.filter(
-        supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_NEEDS_REVIEW
-    ).count()
-    overridden_reviews = base_recommendations.filter(
-        supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_OVERRIDDEN
-    ).count()
+    total_graded = len(base_recommendations)
+    avg_ai_score = sum(rec.ai_score for rec in base_recommendations) / total_graded if total_graded else 0
+    avg_teacher_score = (
+        sum((rec.teacher_score or 0) for rec in base_recommendations) / total_graded if total_graded else 0
+    )
+    avg_difference = sum(rec.score_difference for rec in base_recommendations) / total_graded if total_graded else 0
+    pending_reviews = sum(
+        1 for rec in base_recommendations
+        if rec.supervisor_status == AIGradeRecommendation.SUPERVISOR_STATUS_PENDING
+    )
+    approved_reviews = sum(
+        1 for rec in base_recommendations
+        if rec.supervisor_status == AIGradeRecommendation.SUPERVISOR_STATUS_APPROVED
+    )
+    flagged_reviews = sum(
+        1 for rec in base_recommendations
+        if rec.supervisor_status == AIGradeRecommendation.SUPERVISOR_STATUS_NEEDS_REVIEW
+    )
+    overridden_reviews = sum(
+        1 for rec in base_recommendations
+        if rec.supervisor_status == AIGradeRecommendation.SUPERVISOR_STATUS_OVERRIDDEN
+    )
+    small_differences = sum(1 for rec in base_recommendations if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_SMALL)
+    medium_differences = sum(1 for rec in base_recommendations if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_MEDIUM)
+    large_differences_count = sum(1 for rec in base_recommendations if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_LARGE)
+    critical_differences = sum(1 for rec in base_recommendations if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_CRITICAL)
 
-    # Katta farq bo'lgan topshiriqlar
-    large_differences = base_recommendations.filter(score_difference__gte=20).order_by('-score_difference')[:10]
+    # Har bir baho uchun max_score ga nisbatan individual farq tahlili
+    large_differences = [
+        rec for rec in base_recommendations
+        if rec.difference_level in {
+            AIGradeRecommendation.DIFFERENCE_LEVEL_LARGE,
+            AIGradeRecommendation.DIFFERENCE_LEVEL_CRITICAL,
+        }
+    ][:10]
 
     # O'qituvchilar bo'yicha statistika
-    teacher_stats = base_recommendations.values(
-        'submission__assignment__lesson__course__teacher__username',
-        'submission__assignment__lesson__course__teacher__first_name',
-        'submission__assignment__lesson__course__teacher__last_name',
-    ).annotate(
-        total=Count('id'),
-        avg_diff=Avg('score_difference'),
-        avg_ai=Avg('ai_score'),
-        avg_teacher=Avg('teacher_score')
-    ).order_by('-avg_diff')[:10]
+    teacher_map = {}
+    for rec in base_recommendations:
+        teacher = rec.submission.assignment.lesson.course.teacher
+        key = teacher.username
+        if key not in teacher_map:
+            teacher_map[key] = {
+                'submission__assignment__lesson__course__teacher__username': teacher.username,
+                'submission__assignment__lesson__course__teacher__first_name': teacher.first_name,
+                'submission__assignment__lesson__course__teacher__last_name': teacher.last_name,
+                'total': 0,
+                'sum_diff': 0,
+                'sum_ai': 0,
+                'sum_teacher': 0,
+            }
+        teacher_map[key]['total'] += 1
+        teacher_map[key]['sum_diff'] += rec.score_difference
+        teacher_map[key]['sum_ai'] += rec.ai_score
+        teacher_map[key]['sum_teacher'] += rec.teacher_score or 0
+
+    teacher_stats = []
+    for stat in teacher_map.values():
+        total = stat['total'] or 1
+        teacher_stats.append({
+            **stat,
+            'avg_diff': stat['sum_diff'] / total,
+            'avg_ai': stat['sum_ai'] / total,
+            'avg_teacher': stat['sum_teacher'] / total,
+        })
+    teacher_stats = sorted(teacher_stats, key=lambda item: item['avg_diff'], reverse=True)[:10]
 
     # Filter
     filter_type = request.GET.get('filter')
     if filter_type == 'high_difference':
-        recommendations = recommendations.filter(score_difference__gte=20)
+        recommendations = [
+            rec for rec in recommendations
+            if rec.difference_level in {
+                AIGradeRecommendation.DIFFERENCE_LEVEL_LARGE,
+                AIGradeRecommendation.DIFFERENCE_LEVEL_CRITICAL,
+            }
+        ]
     elif filter_type == 'low_difference':
-        recommendations = recommendations.filter(score_difference__lt=10)
+        recommendations = [
+            rec for rec in recommendations
+            if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_SMALL
+        ]
+    elif filter_type == 'medium_difference':
+        recommendations = [
+            rec for rec in recommendations
+            if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_MEDIUM
+        ]
+    elif filter_type == 'critical_difference':
+        recommendations = [
+            rec for rec in recommendations
+            if rec.difference_level == AIGradeRecommendation.DIFFERENCE_LEVEL_CRITICAL
+        ]
     elif filter_type == 'pending':
-        recommendations = recommendations.filter(
-            supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_PENDING
-        )
+        recommendations = [
+            rec for rec in recommendations
+            if rec.supervisor_status == AIGradeRecommendation.SUPERVISOR_STATUS_PENDING
+        ]
     elif filter_type == 'approved':
-        recommendations = recommendations.filter(
-            supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_APPROVED
-        )
+        recommendations = [
+            rec for rec in recommendations
+            if rec.supervisor_status == AIGradeRecommendation.SUPERVISOR_STATUS_APPROVED
+        ]
     elif filter_type == 'needs_review':
-        recommendations = recommendations.filter(
-            supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_NEEDS_REVIEW
-        )
+        recommendations = [
+            rec for rec in recommendations
+            if rec.supervisor_status == AIGradeRecommendation.SUPERVISOR_STATUS_NEEDS_REVIEW
+        ]
     elif filter_type == 'overridden':
-        recommendations = recommendations.filter(
-            supervisor_status=AIGradeRecommendation.SUPERVISOR_STATUS_OVERRIDDEN
-        )
+        recommendations = [
+            rec for rec in recommendations
+            if rec.supervisor_status == AIGradeRecommendation.SUPERVISOR_STATUS_OVERRIDDEN
+        ]
 
     # Paginate
     paginator = Paginator(recommendations, 20)
@@ -2184,6 +2243,10 @@ def supervisor_dashboard(request):
         'approved_reviews': approved_reviews,
         'flagged_reviews': flagged_reviews,
         'overridden_reviews': overridden_reviews,
+        'small_differences': small_differences,
+        'medium_differences': medium_differences,
+        'large_differences_count': large_differences_count,
+        'critical_differences': critical_differences,
         'large_differences': large_differences,
         'teacher_stats': teacher_stats,
         'current_filter': filter_type,

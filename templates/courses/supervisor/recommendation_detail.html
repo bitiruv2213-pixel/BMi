@@ -72,12 +72,12 @@
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="p-4 rounded {% if recommendation.score_difference >= 20 %}bg-danger{% elif recommendation.score_difference >= 10 %}bg-warning{% else %}bg-success{% endif %} text-white">
+                            <div class="p-4 rounded {% if recommendation.difference_level == 'critical' or recommendation.difference_level == 'large' %}bg-danger{% elif recommendation.difference_level == 'medium' %}bg-warning{% else %}bg-success{% endif %} text-white">
                                 <i class="bi bi-arrow-left-right mb-2" style="font-size: 2rem;"></i>
                                 <div class="display-4 fw-bold">{{ recommendation.score_difference }}</div>
-                                <div class="opacity-75">Farq</div>
+                                <div class="opacity-75">{{ recommendation.difference_level_label }}</div>
                                 <div class="mt-2">
-                                    <small class="badge bg-white text-dark">Max: {{ recommendation.max_score }}</small>
+                                    <small class="badge bg-white text-dark">Max: {{ recommendation.max_score }} · {{ recommendation.difference_percent }}%</small>
                                 </div>
                             </div>
                         </div>

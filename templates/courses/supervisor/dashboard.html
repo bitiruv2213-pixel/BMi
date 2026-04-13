@@ -137,10 +137,16 @@
                     O'zgartirilgan
                 </a>
                 <a href="?filter=high_difference" class="btn btn-sm filter-link {% if current_filter == 'high_difference' %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
-                    Katta farq (20+)
+                    Katta farq
                 </a>
                 <a href="?filter=low_difference" class="btn btn-sm filter-link {% if current_filter == 'low_difference' %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
-                    Kichik farq (&lt;10)
+                    Kichik farq
+                </a>
+                <a href="?filter=medium_difference" class="btn btn-sm filter-link {% if current_filter == 'medium_difference' %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
+                    O'rta farq
+                </a>
+                <a href="?filter=critical_difference" class="btn btn-sm filter-link {% if current_filter == 'critical_difference' %}btn-light text-dark{% else %}btn-outline-light{% endif %}">
+                    Kritik farq
                 </a>
             </div>
         </div>
@@ -200,6 +206,34 @@
                     <span class="metric-icon text-info"><i class="bi bi-pencil-square"></i></span>
                     <p class="metric-value">{{ overridden_reviews }}</p>
                     <p class="metric-label">O'zgartirilgan</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card p-3">
+                    <span class="metric-icon text-success"><i class="bi bi-arrows-collapse"></i></span>
+                    <p class="metric-value">{{ small_differences }}</p>
+                    <p class="metric-label">Kichik farqlar</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card p-3">
+                    <span class="metric-icon text-warning"><i class="bi bi-arrows-angle-expand"></i></span>
+                    <p class="metric-value">{{ medium_differences }}</p>
+                    <p class="metric-label">O'rta farqlar</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card p-3">
+                    <span class="metric-icon text-danger"><i class="bi bi-exclamation-circle"></i></span>
+                    <p class="metric-value">{{ large_differences_count }}</p>
+                    <p class="metric-label">Katta farqlar</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card p-3">
+                    <span class="metric-icon text-danger"><i class="bi bi-fire"></i></span>
+                    <p class="metric-value">{{ critical_differences }}</p>
+                    <p class="metric-label">Kritik farqlar</p>
                 </div>
             </div>
         </div>
@@ -264,12 +298,14 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if rec.score_difference >= 20 %}
-                                    <span class="score-chip score-high">+{{ rec.score_difference }}</span>
-                                    {% elif rec.score_difference >= 10 %}
-                                    <span class="score-chip score-mid">+{{ rec.score_difference }}</span>
+                                    {% if rec.difference_level == 'critical' %}
+                                    <span class="score-chip score-high">{{ rec.difference_level_label }} · {{ rec.score_difference }} ({{ rec.difference_percent }}%)</span>
+                                    {% elif rec.difference_level == 'large' %}
+                                    <span class="score-chip score-high">{{ rec.difference_level_label }} · {{ rec.score_difference }} ({{ rec.difference_percent }}%)</span>
+                                    {% elif rec.difference_level == 'medium' %}
+                                    <span class="score-chip score-mid">{{ rec.difference_level_label }} · {{ rec.score_difference }} ({{ rec.difference_percent }}%)</span>
                                     {% else %}
-                                    <span class="score-chip score-good">+{{ rec.score_difference }}</span>
+                                    <span class="score-chip score-good">{{ rec.difference_level_label }} · {{ rec.score_difference }} ({{ rec.difference_percent }}%)</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
@@ -327,8 +363,11 @@
                 <div class="card-body">
                     {% for rec in large_differences %}
                     <div class="d-flex justify-content-between align-items-center mb-2 pb-2 {% if not forloop.last %}border-bottom{% endif %}">
-                        <small>{{ rec.submission.student.username|truncatewords:1 }}</small>
-                        <span class="score-chip score-high">+{{ rec.score_difference }}</span>
+                        <div>
+                            <small class="d-block">{{ rec.submission.student.username|truncatewords:1 }}</small>
+                            <small class="text-muted">{{ rec.difference_level_label }}</small>
+                        </div>
+                        <span class="score-chip score-high">{{ rec.score_difference }} / {{ rec.max_score }} ({{ rec.difference_percent }}%)</span>
                     </div>
                     {% empty %}
                     <p class="text-muted small mb-0">Ma'lumotlar yo'q</p>

@@ -771,6 +771,10 @@ class TelegramUser(models.Model):
 
 class AIGradeRecommendation(models.Model):
     """AI tomonidan topshiriq uchun tavsiya etilgan baho"""
+    DIFFERENCE_LEVEL_SMALL = 'small'
+    DIFFERENCE_LEVEL_MEDIUM = 'medium'
+    DIFFERENCE_LEVEL_LARGE = 'large'
+    DIFFERENCE_LEVEL_CRITICAL = 'critical'
     SUPERVISOR_STATUS_PENDING = 'pending'
     SUPERVISOR_STATUS_APPROVED = 'approved'
     SUPERVISOR_STATUS_NEEDS_REVIEW = 'needs_review'
@@ -846,6 +850,33 @@ class AIGradeRecommendation(models.Model):
         if self.supervisor_score is not None:
             return self.supervisor_score
         return self.teacher_score
+
+    @property
+    def difference_percent(self):
+        if not self.max_score:
+            return 0.0
+        return round((self.score_difference / self.max_score) * 100, 1)
+
+    @property
+    def difference_level(self):
+        percent = self.difference_percent
+        if percent >= 25:
+            return self.DIFFERENCE_LEVEL_CRITICAL
+        if percent >= 15:
+            return self.DIFFERENCE_LEVEL_LARGE
+        if percent >= 7:
+            return self.DIFFERENCE_LEVEL_MEDIUM
+        return self.DIFFERENCE_LEVEL_SMALL
+
+    @property
+    def difference_level_label(self):
+        labels = {
+            self.DIFFERENCE_LEVEL_SMALL: 'Kichik farq',
+            self.DIFFERENCE_LEVEL_MEDIUM: "O'rta farq",
+            self.DIFFERENCE_LEVEL_LARGE: 'Katta farq',
+            self.DIFFERENCE_LEVEL_CRITICAL: 'Kritik farq',
+        }
+        return labels[self.difference_level]
 
 
 # ========================================
