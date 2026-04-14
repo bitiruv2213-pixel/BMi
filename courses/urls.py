@@ -16,6 +16,7 @@ urlpatterns = [
 
     # My Courses
     path('my-courses/', views.my_courses, name='my_courses'),
+    path('my-attendance/', views.my_attendance, name='my_attendance'),
 
     # Lessons
     path('courses/<slug:course_slug>/lessons/<int:lesson_id>/complete/', views.mark_lesson_complete,
@@ -62,6 +63,7 @@ urlpatterns = [
     path('teacher/courses/create/', views.teacher_course_create, name='teacher_course_create'),
     path('teacher/courses/<slug:slug>/edit/', views.teacher_course_edit, name='teacher_course_edit'),
     path('teacher/courses/<slug:slug>/students/', views.teacher_course_students, name='teacher_course_students'),
+    path('teacher/courses/<slug:slug>/attendance/', views.teacher_course_attendance, name='teacher_course_attendance'),
     path('teacher/courses/<slug:course_slug>/student/<int:user_id>/', views.teacher_student_detail,
          name='teacher_student_detail'),
     path('teacher/courses/<slug:slug>/delete/', views.teacher_course_delete, name='teacher_course_delete'),

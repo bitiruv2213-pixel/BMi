@@ -13,7 +13,12 @@
             </nav>
             <h2><i class="bi bi-people me-2"></i>Talabalar ro'yxati</h2>
         </div>
-        <a href="{% url 'teacher_course_edit' course.slug %}" class="btn btn-outline-primary"><i class="bi bi-pencil me-2"></i>Tahrirlash</a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'teacher_course_attendance' course.slug %}" class="btn btn-primary">
+                <i class="bi bi-calendar-check me-2"></i>Davomat qilish
+            </a>
+            <a href="{% url 'teacher_course_edit' course.slug %}" class="btn btn-outline-primary"><i class="bi bi-pencil me-2"></i>Tahrirlash</a>
+        </div>
     </div>
 
     <div class="row mb-4">
@@ -62,6 +67,7 @@
                         <th>Email</th>
                         <th class="text-center">Progress</th>
                         <th class="text-center">Holat</th>
+                        <th class="text-center">Davomat</th>
                         <th>Sana</th>
                     </tr>
                 </thead>
@@ -86,6 +92,11 @@
                         </td>
                         <td class="text-center">
                             {% if enrollment.completed %}<span class="badge bg-success">Tugatgan</span>{% else %}<span class="badge bg-primary">Davom</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'teacher_course_attendance' course.slug %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-check2-square me-1"></i>Belgilash
+                            </a>
                         </td>
                         <td>{{ enrollment.enrolled_at|date:"d.m.Y" }}</td>
                     </tr>

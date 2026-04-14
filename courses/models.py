@@ -444,6 +444,7 @@ class Notification(models.Model):
         ('completion', 'Tugatish'),
         ('certificate', 'Sertifikat'),
         ('grade', 'Baho'),
+        ('attendance', 'Davomat'),
         ('reply', 'Javob'),
         ('badge', 'Nishon'),
         ('xp', 'XP'),
@@ -545,6 +546,46 @@ class Wishlist(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.course.title}"
+
+
+# ========================================
+# ATTENDANCE
+# ========================================
+class Attendance(models.Model):
+    STATUS_PRESENT = 'present'
+    STATUS_ABSENT = 'absent'
+    STATUS_LATE = 'late'
+    STATUS_EXCUSED = 'excused'
+    STATUS_CHOICES = [
+        (STATUS_PRESENT, 'Qatnashdi'),
+        (STATUS_ABSENT, 'Qatnashmadi'),
+        (STATUS_LATE, 'Kechikdi'),
+        (STATUS_EXCUSED, 'Sababli'),
+    ]
+
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='attendance_records')
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='attendance_records')
+    date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    note = models.CharField(max_length=255, blank=True)
+    marked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='marked_attendance_records',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Davomat"
+        verbose_name_plural = "Davomatlar"
+        ordering = ['-date', 'student__username']
+        unique_together = ['course', 'student', 'date']
+
+    def __str__(self):
+        return f"{self.course.title} - {self.student.username} - {self.date}"
 
 
 # ========================================

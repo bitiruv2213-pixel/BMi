@@ -112,6 +112,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'my_attendance' %}active{% endif %}"
+                           href="{% url 'my_attendance' %}">
+                            <i class="bi bi-calendar-check me-1"></i>Davomatim
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if 'game_arena' in request.resolver_match.url_name|default:'' %}active{% endif %}"
                            href="{% url 'game_arena' %}">
                             <i class="bi bi-joystick me-1"></i>Game Arena
@@ -242,6 +248,11 @@
                             <li>
                                 <a class="dropdown-item" href="{% url 'my_certificates' %}">
                                     <i class="bi bi-award me-2"></i>Sertifikatlar
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'my_attendance' %}">
+                                    <i class="bi bi-calendar-check me-2"></i>Davomatim
                                 </a>
                             </li>
                             <li>

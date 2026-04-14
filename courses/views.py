@@ -1,9 +1,12 @@
+from datetime import datetime
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.http import JsonResponse, FileResponse
 from django.core.paginator import Paginator
+from django.urls import reverse
 from django.db.models import Q, Avg, Count, Sum
 from django.utils import timezone
 from django.conf import settings
@@ -16,6 +19,7 @@ from .models import (
     Discussion, Reply, Notification, Payment, PromoCode,
     Wishlist, Badge, UserBadge, UserXP, XPTransaction,
     DailyChallenge, UserChallenge, AIGradeRecommendation,
+    Attendance,
     TypingText, CodeChallenge, GameScore, MemoryCard
 )
 from .forms import (
@@ -638,6 +642,47 @@ def my_courses(request):
         'current_status': status,
     }
     return render(request, 'courses/my_courses.html', context)
+
+
+@login_required
+def my_attendance(request):
+    if not _require_student(request):
+        return redirect('dashboard')
+
+    attendance_records = Attendance.objects.filter(student=request.user).select_related('course', 'marked_by')
+    course_slug = request.GET.get('course')
+    if course_slug:
+        attendance_records = attendance_records.filter(course__slug=course_slug)
+
+    status = request.GET.get('status')
+    if status in dict(Attendance.STATUS_CHOICES):
+        attendance_records = attendance_records.filter(status=status)
+
+    paginator = Paginator(attendance_records.order_by('-date', '-updated_at'), 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    all_records = Attendance.objects.filter(student=request.user)
+    total_records = all_records.count()
+    present_count = all_records.filter(status=Attendance.STATUS_PRESENT).count()
+    late_count = all_records.filter(status=Attendance.STATUS_LATE).count()
+    excused_count = all_records.filter(status=Attendance.STATUS_EXCUSED).count()
+    absent_count = all_records.filter(status=Attendance.STATUS_ABSENT).count()
+    attendance_percent = round(((present_count + late_count) / total_records) * 100, 1) if total_records else 0
+
+    context = {
+        'attendance_records': page_obj,
+        'course_options': Enrollment.objects.filter(student=request.user).select_related('course'),
+        'current_course': course_slug,
+        'current_status': status,
+        'total_records': total_records,
+        'present_count': present_count,
+        'late_count': late_count,
+        'excused_count': excused_count,
+        'absent_count': absent_count,
+        'attendance_percent': attendance_percent,
+        'status_choices': Attendance.STATUS_CHOICES,
+    }
+    return render(request, 'courses/attendance/my_attendance.html', context)
 
 
 # ==========================================
@@ -1407,6 +1452,103 @@ def teacher_course_students(request, slug):
         'completed_count': Enrollment.objects.filter(course=course, completed=True).count(),
     }
     return render(request, 'courses/teacher/course_students.html', context)
+
+
+@login_required
+def teacher_course_attendance(request, slug):
+    if not _require_teacher(request):
+        return redirect('dashboard')
+
+    course = get_object_or_404(Course, slug=slug, teacher=request.user)
+    enrollments = list(
+        Enrollment.objects.filter(course=course)
+        .select_related('student')
+        .order_by('student__first_name', 'student__username')
+    )
+
+    selected_date_raw = request.POST.get('attendance_date') if request.method == 'POST' else request.GET.get('date')
+    try:
+        selected_date = datetime.strptime(selected_date_raw, '%Y-%m-%d').date() if selected_date_raw else timezone.localdate()
+    except ValueError:
+        selected_date = timezone.localdate()
+
+    if request.method == 'POST':
+        updated_count = 0
+        for enrollment in enrollments:
+            status_value = (request.POST.get(f'status_{enrollment.student_id}') or '').strip()
+            note_value = (request.POST.get(f'note_{enrollment.student_id}') or '').strip()
+            if status_value not in dict(Attendance.STATUS_CHOICES):
+                continue
+
+            attendance, created = Attendance.objects.update_or_create(
+                course=course,
+                student=enrollment.student,
+                date=selected_date,
+                defaults={
+                    'status': status_value,
+                    'note': note_value,
+                    'marked_by': request.user,
+                }
+            )
+            updated_count += 1
+
+            status_label = attendance.get_status_display().lower()
+            Notification.objects.create(
+                recipient=enrollment.student,
+                title=f"Davomat belgilandi: {course.title}",
+                message=(
+                    f"{selected_date.strftime('%d.%m.%Y')} sanadagi davomat holatingiz: "
+                    f"{status_label}."
+                    + (f" Izoh: {note_value}" if note_value else "")
+                ),
+                notification_type='attendance',
+                link='/my-attendance/',
+            )
+
+        if updated_count:
+            messages.success(request, f"{selected_date.strftime('%d.%m.%Y')} uchun {updated_count} ta davomat saqlandi.")
+        else:
+            messages.warning(request, "Saqlash uchun kamida bitta talabaga davomat holatini tanlang.")
+        return redirect(f"{reverse('teacher_course_attendance', args=[course.slug])}?date={selected_date.isoformat()}")
+
+    records_by_student = {
+        record.student_id: record
+        for record in Attendance.objects.filter(course=course, date=selected_date).select_related('student')
+    }
+
+    attendance_rows = []
+    summary = {
+        Attendance.STATUS_PRESENT: 0,
+        Attendance.STATUS_ABSENT: 0,
+        Attendance.STATUS_LATE: 0,
+        Attendance.STATUS_EXCUSED: 0,
+    }
+    for enrollment in enrollments:
+        record = records_by_student.get(enrollment.student_id)
+        if record:
+            summary[record.status] = summary.get(record.status, 0) + 1
+        attendance_rows.append({
+            'enrollment': enrollment,
+            'record': record,
+        })
+
+    recent_dates = (
+        Attendance.objects.filter(course=course)
+        .values_list('date', flat=True)
+        .distinct()
+        .order_by('-date')[:7]
+    )
+
+    context = {
+        'course': course,
+        'attendance_rows': attendance_rows,
+        'selected_date': selected_date,
+        'status_choices': Attendance.STATUS_CHOICES,
+        'summary': summary,
+        'recent_dates': recent_dates,
+        'total_students': len(enrollments),
+    }
+    return render(request, 'courses/teacher/course_attendance.html', context)
 
 
 @login_required

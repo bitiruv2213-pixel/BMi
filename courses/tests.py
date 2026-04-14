@@ -10,7 +10,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from .models import AIGradeRecommendation, Assignment, Category, Course, Lesson, Notification, Submission
+from .models import AIGradeRecommendation, Assignment, Attendance, Category, Course, Lesson, Notification, Submission
 from .views import (
     _extract_file_for_ai,
     analyze_submission_with_ai,
@@ -610,3 +610,70 @@ class CoursePublishingFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         messages = [str(message) for message in response.context['messages']]
         self.assertTrue(any('talabalar uchun nashr qilindi' in message for message in messages))
+
+
+class AttendanceFlowTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.teacher = User.objects.create_user(username='teacher_attendance', password='testpass123')
+        cls.teacher.profile.is_teacher = True
+        cls.teacher.profile.save(update_fields=['is_teacher'])
+        cls.student = User.objects.create_user(username='student_attendance', password='testpass123')
+        cls.category = Category.objects.create(name='Attendance Category', slug='attendance-category')
+        cls.course = Course.objects.create(
+            title='Attendance Course',
+            description='Course for attendance flow',
+            teacher=cls.teacher,
+            category=cls.category,
+            is_published=True,
+            is_free=True,
+            price=0,
+        )
+        cls.enrollment = cls.course.enrollments.create(student=cls.student)
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_teacher_can_mark_attendance_for_course_students(self):
+        self.client.force_login(self.teacher)
+
+        response = self.client.post(
+            reverse('teacher_course_attendance', args=[self.course.slug]),
+            {
+                'attendance_date': '2026-04-14',
+                f'status_{self.student.id}': Attendance.STATUS_PRESENT,
+                f'note_{self.student.id}': 'Vaqtida keldi',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        attendance = Attendance.objects.get(course=self.course, student=self.student, date='2026-04-14')
+        self.assertEqual(attendance.status, Attendance.STATUS_PRESENT)
+        self.assertEqual(attendance.note, 'Vaqtida keldi')
+        self.assertEqual(attendance.marked_by, self.teacher)
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.student,
+                notification_type='attendance',
+                title__contains=self.course.title,
+            ).exists()
+        )
+
+    def test_student_can_view_my_attendance_page(self):
+        Attendance.objects.create(
+            course=self.course,
+            student=self.student,
+            date='2026-04-13',
+            status=Attendance.STATUS_LATE,
+            note='5 daqiqa kechikdi',
+            marked_by=self.teacher,
+        )
+        self.client.force_login(self.student)
+
+        response = self.client.get(reverse('my_attendance'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Attendance Course')
+        self.assertContains(response, '5 daqiqa kechikdi')
+        self.assertContains(response, 'Kechikdi')
