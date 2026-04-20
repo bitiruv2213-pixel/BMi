@@ -99,6 +99,16 @@ def _build_minimal_pptx(text):
     return buffer.read()
 
 
+def _build_zip_with_supported_files():
+    buffer = tempfile.SpooledTemporaryFile()
+    with zipfile.ZipFile(buffer, 'w') as archive:
+        archive.writestr('src/main.py', 'def solve():\n    return "zip works"\n')
+        archive.writestr('notes/readme.txt', 'ZIP matnli izoh')
+        archive.writestr('docs/task.docx', _build_minimal_docx('ZIP ichidagi Word matni'))
+    buffer.seek(0)
+    return buffer.read()
+
+
 MEDIA_ROOT = Path(__file__).resolve().parent.parent / 'test_media'
 
 
@@ -506,6 +516,34 @@ class AITeacherFlowTests(TestCase):
         ppt_data = _extract_file_for_ai(ppt_assignment.attachment, "O'qituvchi vazifa")
         self.assertIn('Slide vazifa matni', ppt_data['text'])
 
+    def test_extract_file_for_ai_reads_supported_files_from_zip(self):
+        zip_file = SimpleUploadedFile(
+            'submission.zip',
+            _build_zip_with_supported_files(),
+            content_type='application/zip',
+        )
+        zip_assignment = Assignment.objects.create(
+            lesson=self.lesson,
+            title='ZIP assignment',
+            description='ZIP desc',
+            instructions='ZIP instr',
+            max_score=100,
+        )
+
+        submission = Submission.objects.create(
+            student=self.student,
+            assignment=zip_assignment,
+            content='',
+        )
+        submission.file.save('submission.zip', zip_file)
+
+        extracted = _extract_file_for_ai(submission.file, "Talaba javobi")
+
+        self.assertIn('zip works', extracted['text'])
+        self.assertIn('ZIP matnli izoh', extracted['text'])
+        self.assertIn('ZIP ichidagi Word matni', extracted['text'])
+        self.assertTrue(any('ZIP fayli tahlil qilindi' in note for note in extracted['notes']))
+
     @patch('courses.views._call_gemini')
     def test_ai_prompt_includes_teacher_and_student_file_context(self, mock_call):
         mock_call.return_value = {
@@ -547,6 +585,40 @@ class AITeacherFlowTests(TestCase):
         self.assertIn("Talaba javobi fayli", sent_prompt)
         self.assertIn('Teacher requirement content', sent_prompt)
         self.assertIn('Student answer content', sent_prompt)
+
+    @patch('courses.views._call_gemini')
+    def test_ai_prompt_includes_zip_contents(self, mock_call):
+        mock_call.return_value = {
+            'ok': True,
+            'text': '{"score": 77, "confidence": 0.8, "analysis": "ZIP mos", "strengths": "-", "weaknesses": "-", "suggestions": "-"}',
+        }
+        student_zip = SimpleUploadedFile(
+            'answer.zip',
+            _build_zip_with_supported_files(),
+            content_type='application/zip',
+        )
+        zip_assignment = Assignment.objects.create(
+            lesson=self.lesson,
+            title='ZIP prompt assignment',
+            description='ZIP prompt desc',
+            instructions='ZIP prompt instr',
+            max_score=100,
+        )
+
+        submission = Submission.objects.create(
+            student=self.student,
+            assignment=zip_assignment,
+            content='ZIP submission',
+        )
+        submission.file.save('answer.zip', student_zip)
+
+        result = analyze_submission_with_ai(submission, zip_assignment)
+
+        self.assertEqual(result['score'], 77)
+        sent_prompt = mock_call.call_args.args[0][0]['text']
+        self.assertIn('src/main.py', sent_prompt)
+        self.assertIn('zip works', sent_prompt)
+        self.assertIn('ZIP ichidagi Word matni', sent_prompt)
 
 
 class CoursePublishingFlowTests(TestCase):

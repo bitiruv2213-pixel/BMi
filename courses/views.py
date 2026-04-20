@@ -274,6 +274,130 @@ def _build_inline_file_part(file_path, mime_type):
     return {"inline_data": {"mime_type": mime_type, "data": encoded}}, None
 
 
+def _extract_zip_text(file_path, role_label, max_chars=8000):
+    import io
+    import os as _os
+    import zipfile
+    from xml.etree import ElementTree as ET
+
+    text_extensions = {
+        '.py', '.txt', '.js', '.ts', '.html', '.css', '.java',
+        '.cpp', '.c', '.h', '.cs', '.php', '.rb', '.go', '.rs',
+        '.md', '.json', '.xml', '.csv', '.sql', '.sh', '.yaml', '.yml',
+    }
+    collected_chunks = []
+    notes = []
+    used_chars = 0
+    max_files = 20
+
+    def _append_chunk(label, content):
+        nonlocal used_chars
+        if not content or used_chars >= max_chars:
+            return
+        remaining = max_chars - used_chars
+        clipped = content[:remaining]
+        chunk = f"\n\n--- {role_label} ZIP ichidagi fayl: {label} ---\n{clipped}"
+        collected_chunks.append(chunk)
+        used_chars += len(clipped)
+
+    def _extract_docx_bytes(raw_bytes):
+        with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
+            xml_bytes = archive.read('word/document.xml')
+        root = ET.fromstring(xml_bytes)
+        text_nodes = [node.text for node in root.iter() if node.tag.endswith('}t') and node.text]
+        return ' '.join(text_nodes)
+
+    def _extract_pptx_bytes(raw_bytes):
+        slides = []
+        with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
+            slide_names = sorted(
+                name for name in archive.namelist()
+                if name.startswith('ppt/slides/slide') and name.endswith('.xml')
+            )
+            for slide_name in slide_names:
+                root = ET.fromstring(archive.read(slide_name))
+                slide_text = [node.text for node in root.iter() if node.tag.endswith('}t') and node.text]
+                if slide_text:
+                    slides.append(' '.join(slide_text))
+        return '\n'.join(slides)
+
+    def _extract_xlsx_bytes(raw_bytes):
+        def _cell_value(cell, shared_strings):
+            cell_type = cell.attrib.get('t')
+            value_node = next((child for child in cell if child.tag.endswith('}v') and child.text), None)
+            if value_node is None:
+                return ''
+            raw_value = value_node.text or ''
+            if cell_type == 's':
+                try:
+                    return shared_strings[int(raw_value)]
+                except (ValueError, IndexError):
+                    return raw_value
+            return raw_value
+
+        shared_strings = []
+        rows = []
+        with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
+            if 'xl/sharedStrings.xml' in archive.namelist():
+                shared_root = ET.fromstring(archive.read('xl/sharedStrings.xml'))
+                for string_item in shared_root.iter():
+                    if string_item.tag.endswith('}t') and string_item.text:
+                        shared_strings.append(string_item.text)
+
+            sheet_names = sorted(
+                name for name in archive.namelist()
+                if name.startswith('xl/worksheets/sheet') and name.endswith('.xml')
+            )
+            for sheet_name in sheet_names:
+                root = ET.fromstring(archive.read(sheet_name))
+                for row in root.iter():
+                    if not row.tag.endswith('}row'):
+                        continue
+                    values = []
+                    for cell in row:
+                        if cell.tag.endswith('}c'):
+                            value = _cell_value(cell, shared_strings)
+                            if value:
+                                values.append(value)
+                    if values:
+                        rows.append(' | '.join(values))
+        return '\n'.join(rows)
+
+    office_extractors = {
+        '.docx': _extract_docx_bytes,
+        '.pptx': _extract_pptx_bytes,
+        '.xlsx': _extract_xlsx_bytes,
+    }
+
+    with zipfile.ZipFile(file_path) as archive:
+        file_infos = [
+            info for info in archive.infolist()
+            if not info.is_dir() and not _os.path.basename(info.filename).startswith('.')
+        ]
+        for info in file_infos[:max_files]:
+            if used_chars >= max_chars:
+                notes.append("ZIP ichidagi matn limitga yetgani uchun qolgan fayllar tashlab yuborildi.")
+                break
+
+            inner_ext = _os.path.splitext(info.filename)[1].lower()
+            try:
+                raw_bytes = archive.read(info)
+                if inner_ext in text_extensions:
+                    _append_chunk(
+                        info.filename,
+                        raw_bytes.decode('utf-8', errors='ignore'),
+                    )
+                elif inner_ext in office_extractors:
+                    _append_chunk(info.filename, office_extractors[inner_ext](raw_bytes))
+            except Exception as exc:
+                notes.append(f"ZIP ichidagi {info.filename} o'qilmadi: {exc}")
+
+        if len(file_infos) > max_files:
+            notes.append(f"ZIP ichidagi faqat dastlabki {max_files} ta fayl ko'rib chiqildi.")
+
+    return ''.join(collected_chunks), notes
+
+
 def _extract_file_for_ai(field_file, role_label, max_chars=8000):
     import os as _os
 
@@ -318,6 +442,20 @@ def _extract_file_for_ai(field_file, role_label, max_chars=8000):
                 'text': f"\n\n--- {role_label} fayli: {file_name} ---\n{file_content}",
                 'parts': [],
                 'notes': [],
+            }
+
+        if file_ext == '.zip':
+            zip_text, zip_notes = _extract_zip_text(file_path, role_label, max_chars=max_chars)
+            if zip_text:
+                return {
+                    'text': zip_text,
+                    'parts': [],
+                    'notes': [f"{role_label} ZIP fayli tahlil qilindi: {file_name}"] + zip_notes,
+                }
+            return {
+                'text': f"\n\n[{role_label} ZIP faylida o'qiladigan matn topilmadi: {file_name}]",
+                'parts': [],
+                'notes': [f"{role_label} ZIP fayli ochildi, lekin qo'llab-quvvatlanadigan ichki fayl topilmadi."] + zip_notes,
             }
 
         if file_ext in inline_mime:
