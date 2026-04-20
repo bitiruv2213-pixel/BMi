@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
+from django.contrib.auth.password_validation import validate_password
 from .models import Profile
 
 
@@ -81,3 +82,56 @@ class CustomPasswordChangeForm(PasswordChangeForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-control'
+
+
+class PasswordResetRequestForm(forms.Form):
+    email = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={
+        'class': 'form-control form-control-lg',
+        'placeholder': 'email@example.com',
+        'autofocus': True,
+    }))
+
+
+class PasswordResetCodeConfirmForm(forms.Form):
+    email = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={
+        'class': 'form-control form-control-lg',
+        'placeholder': 'email@example.com',
+    }))
+    code = forms.CharField(
+        label="Tasdiqlash kodi",
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control form-control-lg',
+            'placeholder': '123456',
+            'inputmode': 'numeric',
+            'autocomplete': 'one-time-code',
+        }),
+    )
+    new_password1 = forms.CharField(label="Yangi parol", widget=forms.PasswordInput(attrs={
+        'class': 'form-control form-control-lg',
+        'placeholder': 'Yangi parol',
+    }))
+    new_password2 = forms.CharField(label="Parolni tasdiqlang", widget=forms.PasswordInput(attrs={
+        'class': 'form-control form-control-lg',
+        'placeholder': 'Parolni qayta kiriting',
+    }))
+
+    def clean_code(self):
+        return ''.join(ch for ch in self.cleaned_data['code'] if ch.isdigit())
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('new_password1')
+        password2 = cleaned_data.get('new_password2')
+
+        if password1 and password2 and password1 != password2:
+            self.add_error('new_password2', "Parollar mos emas.")
+
+        if password1:
+            try:
+                validate_password(password1)
+            except forms.ValidationError as exc:
+                self.add_error('new_password1', exc)
+
+        return cleaned_data

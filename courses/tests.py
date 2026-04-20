@@ -9,8 +9,9 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
-from .models import AIGradeRecommendation, Assignment, Attendance, Category, Course, Lesson, Notification, Submission
+from .models import AIGradeRecommendation, Assignment, Attendance, Category, Course, Enrollment, Lesson, LessonProgress, Notification, Submission
 from .views import (
     _extract_file_for_ai,
     analyze_submission_with_ai,
@@ -749,3 +750,51 @@ class AttendanceFlowTests(TestCase):
         self.assertContains(response, 'Attendance Course')
         self.assertContains(response, '5 daqiqa kechikdi')
         self.assertContains(response, 'Kechikdi')
+
+
+class TeacherStudentDetailTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.teacher = User.objects.create_user(username='teacher_detail', password='testpass123')
+        cls.teacher.profile.is_teacher = True
+        cls.teacher.profile.save(update_fields=['is_teacher'])
+        cls.student = User.objects.create_user(username='student_detail', password='testpass123')
+        cls.category = Category.objects.create(name='Teacher Detail Category', slug='teacher-detail-category')
+        cls.course = Course.objects.create(
+            title='Teacher Detail Course',
+            description='Course for teacher detail page',
+            teacher=cls.teacher,
+            category=cls.category,
+            is_published=True,
+            is_free=True,
+            price=0,
+        )
+        cls.lesson = Lesson.objects.create(
+            course=cls.course,
+            title='Completed Lesson',
+            lesson_type='text',
+            content='Lesson body',
+            order=1,
+            is_published=True,
+        )
+        cls.enrollment = Enrollment.objects.create(student=cls.student, course=cls.course, progress=100, completed=True)
+        cls.completed_at = timezone.now()
+        LessonProgress.objects.create(
+            student=cls.student,
+            lesson=cls.lesson,
+            completed=True,
+            completed_at=cls.completed_at,
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.teacher)
+
+    def test_teacher_student_detail_page_renders_for_completed_lessons(self):
+        response = self.client.get(
+            reverse('teacher_student_detail', args=[self.course.slug, self.student.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.student.username)
+        self.assertContains(response, self.lesson.title)

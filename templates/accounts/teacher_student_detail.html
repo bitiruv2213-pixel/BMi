@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ enrollment.student.get_full_name|default:enrollment.student.username }} - Progress{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'teacher_courses' %}">Kurslarim</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'teacher_course_students' course.slug %}">{{ course.title|truncatewords:3 }}</a></li>
+                    <li class="breadcrumb-item active">{{ enrollment.student.username }}</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0">{{ enrollment.student.get_full_name|default:enrollment.student.username }}</h2>
+        </div>
+        <a href="{% url 'teacher_course_students' course.slug %}" class="btn btn-outline-secondary">Orqaga</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Umumiy holat</h5>
+                    <div class="mb-2"><strong>Kurs:</strong> {{ course.title }}</div>
+                    <div class="mb-2"><strong>Progress:</strong> {{ progress_percent|floatformat:0 }}%</div>
+                    <div class="mb-2"><strong>Tugatilgan darslar:</strong> {{ completed_lessons }} / {{ total_lessons }}</div>
+                    <div><strong>Yozilgan sana:</strong> {{ enrollment.enrolled_at|date:"d.m.Y H:i" }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Darslar kesimidagi progress</h5>
+                    <div class="list-group list-group-flush">
+                        {% for item in lesson_statuses %}
+                        <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">{{ item.lesson.title }}</div>
+                                <small class="text-muted">{{ item.lesson.get_lesson_type_display }}</small>
+                            </div>
+                            <div class="text-end">
+                                {% if item.completed %}
+                                <span class="badge bg-success">Tugatildi</span>
+                                <div><small class="text-muted">{{ item.completed_at|date:"d.m.Y H:i" }}</small></div>
+                                {% else %}
+                                <span class="badge bg-secondary">Tugatilmagan</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-muted">Bu kursda hali dars yo'q.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

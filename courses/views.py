@@ -1709,7 +1709,7 @@ def teacher_student_detail(request, course_slug, user_id):
             lesson_statuses.append({
                 'lesson': lesson,
                 'completed': progress.completed,
-                'completed_at': progress.updated_at if progress.completed else None,
+                'completed_at': progress.completed_at if progress.completed else None,
             })
         except LessonProgress.DoesNotExist:
             lesson_statuses.append({

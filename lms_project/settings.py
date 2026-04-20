@@ -1,5 +1,6 @@
 ﻿import os
 from pathlib import Path
+import sys
 
 try:
     import dj_database_url
@@ -8,6 +9,20 @@ except ImportError:
     DJ_DATABASE_URL_AVAILABLE = False
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.lower() in ('true', '1', 'yes', 'on')
+
+
+def _env_list(name, default=None):
+    value = os.environ.get(name, '')
+    if not value:
+        return list(default or [])
+    return [item.strip() for item in value.split(',') if item.strip()]
 
 
 def _load_dotenv(path):
@@ -30,16 +45,30 @@ _load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me')
 
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
+IS_PRODUCTION_HINT = bool(
+    os.environ.get('RAILWAY_ENVIRONMENT')
+    or os.environ.get('RAILWAY_PROJECT_ID')
+    or os.environ.get('DATABASE_URL')
+)
+IS_TESTING = 'test' in sys.argv
 
-ALLOWED_HOSTS = ['*', '.railway.app', '.up.railway.app', 'localhost', '127.0.0.1', 'www.lmsuzplatform.uz', 'lmsuzplatform.uz']
+DEBUG = _env_bool('DEBUG', default=not IS_PRODUCTION_HINT)
 
-CSRF_TRUSTED_ORIGINS = [
+ALLOWED_HOSTS = _env_list('ALLOWED_HOSTS', default=[
+    '.railway.app',
+    '.up.railway.app',
+    'localhost',
+    '127.0.0.1',
+    'www.lmsuzplatform.uz',
+    'lmsuzplatform.uz',
+])
+
+CSRF_TRUSTED_ORIGINS = _env_list('CSRF_TRUSTED_ORIGINS', default=[
     'https://*.railway.app',
     'https://*.up.railway.app',
     'https://www.lmsuzplatform.uz',
     'https://lmsuzplatform.uz',
-]
+])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -115,14 +144,22 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
-
-try:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-except:
-    pass
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': (
+            'django.contrib.staticfiles.storage.StaticFilesStorage'
+            if DEBUG or IS_TESTING
+            else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        ),
+    },
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_SERVE_DJANGO = _env_bool('MEDIA_SERVE_DJANGO', default=DEBUG)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -160,18 +197,21 @@ if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
     }
 
 # ==================== EMAIL CONFIGURATION ====================
-# Development: Emails ko'rinadi consoleda
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = _env_bool('EMAIL_USE_TLS', default=True)
+EMAIL_USE_SSL = _env_bool('EMAIL_USE_SSL', default=False)
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '').strip()
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '').strip()
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'LMS Platform <noreply@lms.uz>')
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 
-# Production uchun SMTP (kerak bo'lganda uncomment qiling):
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your-email@gmail.com')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'your-app-password')
-# DEFAULT_FROM_EMAIL = 'LMS Platform <noreply@lms.uz>'
-# SERVER_EMAIL = 'server@lms.uz'
+# Agar SMTP credential berilgan bo'lsa, Gmail orqali haqiqiy email yuboriladi.
+# Aks holda lokal development uchun email console'da ko'rinadi.
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Password Reset Timeout (24 hours)
 PASSWORD_RESET_TIMEOUT = 86400
@@ -191,3 +231,12 @@ SITE_URL = os.environ.get('SITE_URL', 'http://127.0.0.1:8000')
 CERTIFICATE_LOGO_PATH = os.environ.get('CERTIFICATE_LOGO_PATH')
 CERTIFICATE_SIGNATURE_LEFT_PATH = os.environ.get('CERTIFICATE_SIGNATURE_LEFT_PATH')
 CERTIFICATE_SIGNATURE_RIGHT_PATH = os.environ.get('CERTIFICATE_SIGNATURE_RIGHT_PATH')
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = _env_bool('SECURE_SSL_REDIRECT', default=True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'
