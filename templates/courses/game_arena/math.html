@@ -27,14 +27,14 @@
                 <button class="btn btn-outline-warning w-100 p-3 difficulty-btn" data-difficulty="medium">
                     <i class="bi bi-2-circle fs-3 d-block mb-2"></i>
                     <strong>O'rta</strong><br>
-                    <small class="text-muted">+, -, × (1-100)</small>
+                    <small class="text-muted">+, -, * (1-100)</small>
                 </button>
             </div>
             <div class="col-md-3">
                 <button class="btn btn-outline-danger w-100 p-3 difficulty-btn" data-difficulty="hard">
                     <i class="bi bi-3-circle fs-3 d-block mb-2"></i>
                     <strong>Qiyin</strong><br>
-                    <small class="text-muted">+, -, ×, ÷ (1-200)</small>
+                    <small class="text-muted">+, -, *, / (1-200)</small>
                 </button>
             </div>
         </div>
@@ -89,7 +89,7 @@
     <!-- Natija -->
     <div id="game-result" style="display: none;">
         <div class="card p-5 text-center">
-            <div style="font-size: 4rem;" id="result-emoji">🎉</div>
+            <div class="mb-2" id="result-emoji"><i class="bi bi-trophy-fill text-warning" style="font-size: 4rem;"></i></div>
             <h2 class="mb-4">O'yin tugadi!</h2>
             <div class="row g-3 justify-content-center mb-4">
                 <div class="col-md-3">
@@ -118,7 +118,7 @@
                 </div>
             </div>
             <div class="d-flex gap-2 justify-content-center">
-                <button class="btn btn-primary" onclick="location.reload()">
+                <button class="btn btn-primary" id="play-again-btn" type="button">
                     <i class="bi bi-arrow-clockwise me-1"></i>Yana o'ynash
                 </button>
                 <a href="{% url 'game_arena' %}" class="btn btn-outline-secondary">
@@ -142,6 +142,9 @@
     let timeLeft = TIME_LIMIT;
     let timerInterval = null;
     let startTime = null;
+    let questionLocked = false;
+    let gameEnded = false;
+    const answerInput = document.getElementById('answer-input');
 
     // Qiyinlik tanlash
     document.querySelectorAll('.difficulty-btn').forEach(btn => {
@@ -152,10 +155,24 @@
     });
 
     function startGame() {
+        currentQuestion = 0;
+        correct = 0;
+        wrong = 0;
+        correctAnswer = 0;
+        questionLocked = false;
+        gameEnded = false;
         document.getElementById('game-setup').style.display = 'none';
         document.getElementById('game-area').style.display = 'block';
+        document.getElementById('game-result').style.display = 'none';
+        document.getElementById('correct-count').textContent = '0';
+        document.getElementById('wrong-count').textContent = '0';
+        document.getElementById('question-num').textContent = `1/${TOTAL_QUESTIONS}`;
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('game-timer').textContent = TIME_LIMIT + 's';
+        document.getElementById('game-timer').style.color = '';
         startTime = Date.now();
         timeLeft = TIME_LIMIT;
+        answerInput.disabled = false;
 
         timerInterval = setInterval(() => {
             timeLeft--;
@@ -165,7 +182,7 @@
         }, 1000);
 
         generateQuestion();
-        document.getElementById('answer-input').focus();
+        answerInput.focus();
     }
 
     function generateQuestion() {
@@ -177,8 +194,8 @@
 
         let a, b, op, answer;
         const ops_easy = ['+', '-'];
-        const ops_medium = ['+', '-', '×'];
-        const ops_hard = ['+', '-', '×', '÷'];
+        const ops_medium = ['+', '-', '*'];
+        const ops_hard = ['+', '-', '*', '/'];
 
         let ops, maxNum;
         if (difficulty === 'easy') { ops = ops_easy; maxNum = 50; }
@@ -190,11 +207,11 @@
         b = Math.floor(Math.random() * maxNum) + 1;
 
         if (op === '-' && a < b) [a, b] = [b, a];
-        if (op === '÷') {
+        if (op === '/') {
             b = Math.floor(Math.random() * 20) + 1;
             a = b * (Math.floor(Math.random() * 15) + 1);
         }
-        if (op === '×') {
+        if (op === '*') {
             a = Math.floor(Math.random() * 20) + 1;
             b = Math.floor(Math.random() * 20) + 1;
         }
@@ -202,32 +219,35 @@
         switch(op) {
             case '+': answer = a + b; break;
             case '-': answer = a - b; break;
-            case '×': answer = a * b; break;
-            case '÷': answer = a / b; break;
+            case '*': answer = a * b; break;
+            case '/': answer = a / b; break;
         }
         correctAnswer = answer;
+        questionLocked = false;
 
         document.getElementById('question-text').textContent = `${a} ${op} ${b} = ?`;
         document.getElementById('question-num').textContent = `${currentQuestion}/${TOTAL_QUESTIONS}`;
         document.getElementById('progress-bar').style.width = `${(currentQuestion / TOTAL_QUESTIONS) * 100}%`;
-        document.getElementById('answer-input').value = '';
+        answerInput.value = '';
         document.getElementById('feedback').textContent = '';
-        document.getElementById('answer-input').focus();
+        answerInput.focus();
     }
 
-    document.getElementById('answer-input').addEventListener('keydown', function(e) {
+    answerInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
+            if (questionLocked || gameEnded) return;
             const userAnswer = parseFloat(this.value);
             if (isNaN(userAnswer)) return;
+            questionLocked = true;
 
             if (Math.abs(userAnswer - correctAnswer) < 0.01) {
                 correct++;
                 document.getElementById('correct-count').textContent = correct;
-                document.getElementById('feedback').innerHTML = '<span class="text-success">✓ To\'g\'ri!</span>';
+                document.getElementById('feedback').innerHTML = '<span class="text-success">To\'g\'ri!</span>';
             } else {
                 wrong++;
                 document.getElementById('wrong-count').textContent = wrong;
-                document.getElementById('feedback').innerHTML = `<span class="text-danger">✗ Javob: ${correctAnswer}</span>`;
+                document.getElementById('feedback').innerHTML = `<span class="text-danger">Javob: ${correctAnswer}</span>`;
             }
 
             setTimeout(generateQuestion, 600);
@@ -235,20 +255,24 @@
     });
 
     function endGame() {
+        if (gameEnded) return;
+        gameEnded = true;
         clearInterval(timerInterval);
         document.getElementById('game-area').style.display = 'none';
         document.getElementById('game-result').style.display = 'block';
+        answerInput.disabled = true;
 
         const timeSpent = Math.round((Date.now() - startTime) / 1000);
+        const totalAnswered = correct + wrong;
 
         document.getElementById('final-correct').textContent = correct;
         document.getElementById('final-wrong').textContent = wrong;
         document.getElementById('final-time').textContent = timeSpent + 's';
 
-        if (correct >= 15) document.getElementById('result-emoji').textContent = '🏆';
-        else if (correct >= 10) document.getElementById('result-emoji').textContent = '🎉';
-        else if (correct >= 5) document.getElementById('result-emoji').textContent = '👍';
-        else document.getElementById('result-emoji').textContent = '💪';
+        if (correct >= 15) document.getElementById('result-emoji').innerHTML = '<i class="bi bi-trophy-fill text-warning" style="font-size: 4rem;"></i>';
+        else if (correct >= 10) document.getElementById('result-emoji').innerHTML = '<i class="bi bi-emoji-smile-fill text-success" style="font-size: 4rem;"></i>';
+        else if (correct >= 5) document.getElementById('result-emoji').innerHTML = '<i class="bi bi-hand-thumbs-up-fill text-primary" style="font-size: 4rem;"></i>';
+        else document.getElementById('result-emoji').innerHTML = '<i class="bi bi-lightning-charge-fill text-info" style="font-size: 4rem;"></i>';
 
         fetch("{% url 'math_game_submit' %}", {
             method: 'POST',
@@ -258,7 +282,7 @@
             },
             body: JSON.stringify({
                 correct: correct,
-                total: currentQuestion - 1,
+                total: totalAnswered,
                 time_spent: timeSpent,
                 difficulty: difficulty
             })
@@ -266,8 +290,18 @@
         .then(r => r.json())
         .then(data => {
             document.getElementById('final-xp').textContent = '+' + data.xp_earned + ' XP';
+        })
+        .catch(() => {
+            document.getElementById('final-xp').textContent = '+0 XP';
         });
     }
+
+    document.getElementById('play-again-btn').addEventListener('click', function() {
+        clearInterval(timerInterval);
+        document.getElementById('game-setup').style.display = 'block';
+        document.getElementById('game-area').style.display = 'none';
+        document.getElementById('game-result').style.display = 'none';
+    });
 })();
 </script>
 {% endblock %}

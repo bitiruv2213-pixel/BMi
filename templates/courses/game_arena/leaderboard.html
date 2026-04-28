@@ -8,7 +8,7 @@
             <a href="{% url 'game_arena' %}" class="text-muted text-decoration-none">
                 <i class="bi bi-arrow-left me-1"></i>Game Arena
             </a>
-            <h2 class="mt-2"><i class="bi bi-trophy me-2 text-warning"></i>{{ game_name }} — Leaderboard</h2>
+            <h2 class="mt-2"><i class="bi bi-trophy me-2 text-warning"></i>{{ game_name }} - Leaderboard</h2>
         </div>
         {% if user_best %}
         <div>
@@ -51,9 +51,9 @@
                     {% for s in scores %}
                     <tr {% if s.user == request.user %}class="table-primary"{% endif %}>
                         <td>
-                            {% if forloop.counter == 1 %}<span style="font-size: 1.5em;">🥇</span>
-                            {% elif forloop.counter == 2 %}<span style="font-size: 1.5em;">🥈</span>
-                            {% elif forloop.counter == 3 %}<span style="font-size: 1.5em;">🥉</span>
+                            {% if forloop.counter == 1 %}<i class="bi bi-trophy-fill text-warning" style="font-size: 1.2rem;"></i>
+                            {% elif forloop.counter == 2 %}<i class="bi bi-award-fill text-secondary" style="font-size: 1.2rem;"></i>
+                            {% elif forloop.counter == 3 %}<i class="bi bi-award-fill" style="font-size: 1.2rem; color: #b45309;"></i>
                             {% else %}<span class="text-muted">{{ forloop.counter }}</span>{% endif %}
                         </td>
                         <td>
@@ -64,13 +64,13 @@
                         <td><span class="badge bg-success">+{{ s.xp_earned }} XP</span></td>
                         <td class="text-muted small">
                             {% if game_type == 'typing' %}
-                                {{ s.details.wpm|default:"—" }} WPM, {{ s.details.accuracy|default:"—" }}%
+                                {{ s.details.wpm|default:"-" }} WPM, {{ s.details.accuracy|default:"-" }}%
                             {% elif game_type == 'code' %}
-                                {{ s.details.passed_tests|default:"—" }}/{{ s.details.total_tests|default:"—" }} test
+                                {{ s.details.passed_tests|default:"-" }}/{{ s.details.total_tests|default:"-" }} test
                             {% elif game_type == 'math' %}
-                                {{ s.details.correct|default:"—" }}/{{ s.details.total|default:"—" }} to'g'ri
+                                {{ s.details.correct|default:"-" }}/{{ s.details.total|default:"-" }} to'g'ri
                             {% elif game_type == 'memory' %}
-                                {{ s.details.time_spent|default:"—" }}s, {{ s.details.moves|default:"—" }} harakat
+                                {{ s.details.time_spent|default:"-" }}s, {{ s.details.moves|default:"-" }} harakat
                             {% endif %}
                         </td>
                         <td class="text-muted small">{{ s.played_at|date:"d.m.Y H:i" }}</td>

@@ -2,16 +2,34 @@ import os
 import shutil
 import tempfile
 import zipfile
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import AIGradeRecommendation, Assignment, Attendance, Category, Course, Enrollment, Lesson, LessonProgress, Notification, Submission
+from .models import (
+    AIGradeRecommendation,
+    Assignment,
+    Attendance,
+    Category,
+    CodeChallenge,
+    Course,
+    Enrollment,
+    GameScore,
+    Lesson,
+    LessonProgress,
+    MemoryCard,
+    Notification,
+    Submission,
+    TypingText,
+)
+from .email_utils import send_quiz_result_email
 from .views import (
     _extract_file_for_ai,
     analyze_submission_with_ai,
@@ -752,6 +770,120 @@ class AttendanceFlowTests(TestCase):
         self.assertContains(response, 'Kechikdi')
 
 
+class PaymentFlowTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.teacher = User.objects.create_user(username='teacher_payment', password='testpass123')
+        cls.teacher.profile.is_teacher = True
+        cls.teacher.profile.save(update_fields=['is_teacher'])
+        cls.student = User.objects.create_user(username='student_payment', password='testpass123')
+        cls.category = Category.objects.create(name='Payment Category', slug='payment-category')
+        cls.course = Course.objects.create(
+            title='Paid Course',
+            description='Course for payment flow tests',
+            teacher=cls.teacher,
+            category=cls.category,
+            is_published=True,
+            is_free=False,
+            price=150000,
+            total_students=0,
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.student)
+
+    def test_payment_process_rejects_mismatched_amount(self):
+        response = self.client.post(
+            reverse('payment_process', args=[self.course.slug]),
+            {'amount': '1000', 'payment_method': 'payme'},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Enrollment.objects.filter(student=self.student, course=self.course).exists())
+        self.assertFalse(self.course.payments.exists())
+
+    def test_payment_process_enrolls_once_and_uses_course_price(self):
+        response = self.client.post(
+            reverse('payment_process', args=[self.course.slug]),
+            {'amount': '150000', 'payment_method': 'click'},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Enrollment.objects.filter(student=self.student, course=self.course).count(), 1)
+        payment = self.course.payments.get(student=self.student)
+        self.assertEqual(payment.amount, Decimal('150000'))
+        self.course.refresh_from_db()
+        self.assertEqual(self.course.total_students, 1)
+
+    def test_free_enrollment_updates_total_students_atomically(self):
+        self.course.is_free = True
+        self.course.save(update_fields=['is_free'])
+
+        response = self.client.get(reverse('enroll_course', args=[self.course.slug]), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.course.refresh_from_db()
+        self.assertEqual(self.course.total_students, 1)
+
+
+class EmailUtilsTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.student = User.objects.create_user(
+            username='quiz_email_user',
+            email='quiz@example.com',
+            password='testpass123',
+            first_name='Quiz',
+        )
+        cls.teacher = User.objects.create_user(username='quiz_email_teacher', password='testpass123')
+        cls.teacher.profile.is_teacher = True
+        cls.teacher.profile.save(update_fields=['is_teacher'])
+        cls.category = Category.objects.create(name='Email Category', slug='email-category')
+        cls.course = Course.objects.create(
+            title='Quiz Email Course',
+            description='desc',
+            teacher=cls.teacher,
+            category=cls.category,
+            is_published=True,
+            is_free=True,
+            price=0,
+        )
+        cls.lesson = Lesson.objects.create(
+            course=cls.course,
+            title='Quiz Lesson',
+            lesson_type='quiz',
+            content='Lesson body',
+            order=1,
+            is_published=True,
+        )
+        cls.quiz = cls.lesson.quizzes.create(
+            title='Email Quiz',
+            description='desc',
+            passing_score=70,
+            max_attempts=3,
+        )
+
+    def test_send_quiz_result_email_uses_attempt_answer_fields(self):
+        attempt = self.student.quiz_attempts.create(
+            quiz=self.quiz,
+            score=80,
+            passed=True,
+            correct_answers=8,
+            wrong_answers=2,
+            xp_earned=25,
+            completed_at=timezone.now(),
+        )
+
+        send_quiz_result_email(attempt)
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("To'g'ri javoblar: 8", mail.outbox[0].body)
+        self.assertIn("Noto'g'ri javoblar: 2", mail.outbox[0].body)
+
+
 class TeacherStudentDetailTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -798,3 +930,98 @@ class TeacherStudentDetailTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.student.username)
         self.assertContains(response, self.lesson.title)
+
+
+class GameArenaTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(username='arena_player', password='testpass123')
+        TypingText.objects.create(
+            text='python kod yozish juda qiziqarli',
+            difficulty='easy',
+            is_active=True,
+        )
+        cls.challenge = CodeChallenge.objects.create(
+            title='Ikki son yigindisi',
+            description='Ikki sonni qoshing',
+            difficulty='easy',
+            initial_code='a = int(input())\nb = int(input())\nprint(a + b)',
+            solution='print(0)',
+            test_cases=[{'input': '2\n3', 'expected': '5'}],
+            time_limit=60,
+            xp_reward=20,
+            is_active=True,
+        )
+        MemoryCard.objects.create(term='HTML', match='Markup tili', is_active=True)
+        MemoryCard.objects.create(term='CSS', match='Stil berish', is_active=True)
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_game_pages_render(self):
+        urls = [
+            reverse('game_arena'),
+            reverse('typing_game'),
+            reverse('code_challenge_list'),
+            reverse('code_challenge_play', args=[self.challenge.pk]),
+            reverse('math_game'),
+            reverse('memory_game'),
+        ]
+
+        for url in urls:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200, url)
+
+    def test_typing_game_submit_saves_score(self):
+        response = self.client.post(
+            reverse('typing_game_submit'),
+            data='{"wpm": 72, "accuracy": 98, "time_spent": 25}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['success'])
+        score = GameScore.objects.get(user=self.user, game_type='typing')
+        self.assertEqual(score.score, int(72 * 0.98))
+
+    def test_code_challenge_endpoints_work(self):
+        run_response = self.client.post(
+            reverse('code_challenge_run'),
+            data='{"challenge_id": %d, "code": "a = int(input())\\nb = int(input())\\nprint(a + b)"}' % self.challenge.pk,
+            content_type='application/json',
+        )
+        self.assertEqual(run_response.status_code, 200)
+        self.assertEqual(run_response.json()['passed'], 1)
+
+        submit_response = self.client.post(
+            reverse('code_challenge_submit'),
+            data='{"challenge_id": %d, "code": "a = int(input())\\nb = int(input())\\nprint(a + b)", "time_spent": 12}' % self.challenge.pk,
+            content_type='application/json',
+        )
+        self.assertEqual(submit_response.status_code, 200)
+        self.assertTrue(submit_response.json()['all_passed'])
+        self.assertTrue(
+            GameScore.objects.filter(user=self.user, game_type='code', details__challenge_id=self.challenge.pk).exists()
+        )
+
+    def test_math_and_memory_submit_work(self):
+        math_response = self.client.post(
+            reverse('math_game_submit'),
+            data='{"correct": 12, "total": 20, "time_spent": 40, "difficulty": "medium"}',
+            content_type='application/json',
+        )
+        self.assertEqual(math_response.status_code, 200)
+        self.assertTrue(math_response.json()['success'])
+
+        memory_response = self.client.post(
+            reverse('memory_game_submit'),
+            data='{"time_spent": 45, "moves": 18, "pairs": 2}',
+            content_type='application/json',
+        )
+        self.assertEqual(memory_response.status_code, 200)
+        self.assertTrue(memory_response.json()['success'])
+
+        self.assertEqual(GameScore.objects.filter(user=self.user, game_type='math').count(), 1)
+        self.assertEqual(GameScore.objects.filter(user=self.user, game_type='memory').count(), 1)

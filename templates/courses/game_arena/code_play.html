@@ -99,12 +99,14 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2 justify-content-center">
-                    <a href="{% url 'code_challenge_list' %}" class="btn btn-outline-secondary">
+                    <button type="button" id="back-to-list-btn" class="btn btn-outline-secondary"
+                            data-url="{% url 'code_challenge_list' %}">
                         <i class="bi bi-list me-1"></i>Masalalar
-                    </a>
-                    <a href="{% url 'game_arena' %}" class="btn btn-primary">
+                    </button>
+                    <button type="button" id="back-to-arena-btn" class="btn btn-primary"
+                            data-url="{% url 'game_arena' %}">
                         <i class="bi bi-grid me-1"></i>Arena
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -124,11 +126,17 @@
     const submitBtn = document.getElementById('submit-btn');
     const outputArea = document.getElementById('output-area');
     const testResults = document.getElementById('test-results');
+    const resultModalEl = document.getElementById('resultModal');
+    const resultModal = new bootstrap.Modal(resultModalEl);
+    const backToListBtn = document.getElementById('back-to-list-btn');
+    const backToArenaBtn = document.getElementById('back-to-arena-btn');
 
     let timeLeft = timeLimit;
     let timerInterval = null;
     let started = false;
     let passedTests = 0;
+    let submissionInProgress = false;
+    let gameFinished = false;
 
     codeEditor.addEventListener('input', function() {
         if (!started) {
@@ -183,11 +191,11 @@
                 data.results.forEach(r => {
                     if (r.passed) {
                         passedTests++;
-                        html += `<div class="mb-1 text-success"><i class="bi bi-check-circle me-1"></i>Test ${r.index}: ✓ O'tdi</div>`;
+                        html += `<div class="mb-1 text-success"><i class="bi bi-check-circle me-1"></i>Test ${r.index}: O'tdi</div>`;
                     } else if (r.error) {
-                        html += `<div class="mb-1 text-danger"><i class="bi bi-x-circle me-1"></i>Test ${r.index}: ✗ Xato: ${r.error}</div>`;
+                        html += `<div class="mb-1 text-danger"><i class="bi bi-x-circle me-1"></i>Test ${r.index}: Xato: ${r.error}</div>`;
                     } else {
-                        html += `<div class="mb-1 text-danger"><i class="bi bi-x-circle me-1"></i>Test ${r.index}: ✗ Kutilgan: "${r.expected}", Natija: "${r.actual}"</div>`;
+                        html += `<div class="mb-1 text-danger"><i class="bi bi-x-circle me-1"></i>Test ${r.index}: Kutilgan: "${r.expected}", Natija: "${r.actual}"</div>`;
                     }
                 });
             }
@@ -203,16 +211,23 @@
     });
 
     resetBtn.addEventListener('click', function() {
+        if (gameFinished) return;
         codeEditor.value = initialCode;
         outputArea.style.display = 'none';
         submitBtn.style.display = 'none';
+        submitBtn.disabled = false;
     });
 
     submitBtn.addEventListener('click', submitResult);
 
     function submitResult() {
+        if (submissionInProgress || gameFinished) return;
         if (timerInterval) clearInterval(timerInterval);
+        submissionInProgress = true;
         const timeSpent = timeLimit - timeLeft;
+        runBtn.disabled = true;
+        submitBtn.disabled = true;
+        resetBtn.disabled = true;
 
         fetch("{% url 'code_challenge_submit' %}", {
             method: 'POST',
@@ -230,20 +245,46 @@
         })
         .then(r => r.json())
         .then(data => {
-            const icon = data.all_passed ? '🎉' : '😔';
+            gameFinished = true;
+            const icon = data.all_passed
+                ? '<i class="bi bi-patch-check-fill text-success" style="font-size: 4rem;"></i>'
+                : '<i class="bi bi-emoji-frown-fill text-warning" style="font-size: 4rem;"></i>';
             const title = data.all_passed ? 'Barakalla!' : 'Urinib ko\'ring';
             const text = data.all_passed
                 ? `Barcha testlar o'tdi!`
                 : `${data.passed_tests}/${data.total_tests} test o'tdi`;
 
-            document.getElementById('result-icon').textContent = icon;
+            document.getElementById('result-icon').innerHTML = icon;
             document.getElementById('result-title').textContent = title;
             document.getElementById('result-text').textContent = text;
             document.getElementById('result-tests').textContent = `${data.passed_tests}/${data.total_tests}`;
             document.getElementById('result-xp').textContent = `+${data.xp_earned} XP`;
-            new bootstrap.Modal(document.getElementById('resultModal')).show();
+            resultModal.show();
+        })
+        .catch(() => {
+            submissionInProgress = false;
+            runBtn.disabled = false;
+            submitBtn.disabled = false;
+            resetBtn.disabled = false;
+            outputArea.style.display = 'block';
+            testResults.innerHTML = '<div class="text-danger">Natijani yuborishda xatolik yuz berdi.</div>';
         });
     }
+
+    function navigateFromModal(url) {
+        resultModal.hide();
+        document.body.classList.remove('modal-open');
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        window.location.assign(url);
+    }
+
+    backToListBtn.addEventListener('click', function() {
+        navigateFromModal(this.dataset.url);
+    });
+
+    backToArenaBtn.addEventListener('click', function() {
+        navigateFromModal(this.dataset.url);
+    });
 })();
 </script>
 {% endblock %}

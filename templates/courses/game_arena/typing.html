@@ -100,12 +100,14 @@
                         </div>
                     </div>
                     <div class="d-flex gap-2 justify-content-center">
-                        <a href="{% url 'typing_game' %}?difficulty={{ difficulty }}" class="btn btn-primary">
+                        <button type="button" id="play-again-btn" class="btn btn-primary"
+                                data-url="{% url 'typing_game' %}?difficulty={{ difficulty }}">
                             <i class="bi bi-arrow-clockwise me-1"></i>Yana o'ynash
-                        </a>
-                        <a href="{% url 'game_arena' %}" class="btn btn-outline-secondary">
+                        </button>
+                        <button type="button" id="back-to-arena-btn" class="btn btn-outline-secondary"
+                                data-url="{% url 'game_arena' %}">
                             <i class="bi bi-grid me-1"></i>Arena
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -133,6 +135,10 @@
     const timeDisplay = document.getElementById('time-display');
     const progressDisplay = document.getElementById('progress-display');
     const restartBtn = document.getElementById('restart-btn');
+    const resultModalEl = document.getElementById('resultModal');
+    const resultModal = new bootstrap.Modal(resultModalEl);
+    const playAgainBtn = document.getElementById('play-again-btn');
+    const backToArenaBtn = document.getElementById('back-to-arena-btn');
     let startTime = null;
     let timerInterval = null;
     let finished = false;
@@ -206,6 +212,13 @@
         timeDisplay.textContent = elapsed + 's';
     }
 
+    function navigateFromModal(url) {
+        resultModal.hide();
+        document.body.classList.remove('modal-open');
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        window.location.assign(url);
+    }
+
     function finishGame(wpm, accuracy) {
         finished = true;
         clearInterval(timerInterval);
@@ -231,12 +244,27 @@
             document.getElementById('result-accuracy').textContent = data.accuracy + '%';
             document.getElementById('result-time').textContent = timeSpent + 's';
             document.getElementById('result-xp').textContent = '+' + data.xp_earned + ' XP';
-            new bootstrap.Modal(document.getElementById('resultModal')).show();
+            resultModal.show();
+        })
+        .catch(() => {
+            document.getElementById('result-wpm').textContent = wpm;
+            document.getElementById('result-accuracy').textContent = accuracy + '%';
+            document.getElementById('result-time').textContent = timeSpent + 's';
+            document.getElementById('result-xp').textContent = '+0 XP';
+            resultModal.show();
         });
     }
 
     restartBtn.addEventListener('click', function() {
         location.reload();
+    });
+
+    playAgainBtn.addEventListener('click', function() {
+        navigateFromModal(this.dataset.url);
+    });
+
+    backToArenaBtn.addEventListener('click', function() {
+        navigateFromModal(this.dataset.url);
     });
 })();
 </script>

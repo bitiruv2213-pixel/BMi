@@ -37,7 +37,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-body text-center p-5">
-                <div class="mb-3" style="font-size: 4rem;">🧠</div>
+                <div class="mb-3"><i class="bi bi-grid-3x3-gap-fill text-danger" style="font-size: 4rem;"></i></div>
                 <h3 class="mb-4">Ajoyib xotira!</h3>
                 <div class="row g-3 mb-4">
                     <div class="col-4">
@@ -60,12 +60,13 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2 justify-content-center">
-                    <button class="btn btn-primary" onclick="location.reload()">
+                    <button type="button" id="play-again-btn" class="btn btn-primary">
                         <i class="bi bi-arrow-clockwise me-1"></i>Yana o'ynash
                     </button>
-                    <a href="{% url 'game_arena' %}" class="btn btn-outline-secondary">
+                    <button type="button" id="back-to-arena-btn" class="btn btn-outline-secondary"
+                            data-url="{% url 'game_arena' %}">
                         <i class="bi bi-grid me-1"></i>Arena
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -143,6 +144,20 @@
     let startTime = null;
     let timerInterval = null;
     let locked = false;
+    let finished = false;
+    const resultModalEl = document.getElementById('resultModal');
+    const resultModal = new bootstrap.Modal(resultModalEl);
+    const playAgainBtn = document.getElementById('play-again-btn');
+    const backToArenaBtn = document.getElementById('back-to-arena-btn');
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
 
     function initGame() {
         const board = document.getElementById('game-board');
@@ -152,6 +167,7 @@
         matchedPairs = 0;
         moves = 0;
         locked = false;
+        finished = false;
         if (timerInterval) clearInterval(timerInterval);
         startTime = null;
 
@@ -180,7 +196,7 @@
             card.innerHTML = `
                 <div class="memory-card-inner">
                     <div class="memory-card-front"><i class="bi bi-question-lg"></i></div>
-                    <div class="memory-card-back">${data.text}</div>
+                    <div class="memory-card-back">${escapeHtml(data.text)}</div>
                 </div>
             `;
             card.addEventListener('click', () => flipCard(card));
@@ -234,6 +250,8 @@
     }
 
     function endGame() {
+        if (finished) return;
+        finished = true;
         clearInterval(timerInterval);
         const timeSpent = Math.round((Date.now() - startTime) / 1000);
 
@@ -256,12 +274,35 @@
             document.getElementById('result-xp').textContent = '+' + data.xp_earned + ' XP';
 
             setTimeout(() => {
-                new bootstrap.Modal(document.getElementById('resultModal')).show();
+                resultModal.show();
+            }, 500);
+        })
+        .catch(() => {
+            document.getElementById('result-time').textContent = timeSpent + 's';
+            document.getElementById('result-moves').textContent = moves;
+            document.getElementById('result-xp').textContent = '+0 XP';
+
+            setTimeout(() => {
+                resultModal.show();
             }, 500);
         });
     }
 
+    function cleanupModalState() {
+        resultModal.hide();
+        document.body.classList.remove('modal-open');
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+    }
+
     document.getElementById('restart-btn').addEventListener('click', initGame);
+    playAgainBtn.addEventListener('click', function() {
+        cleanupModalState();
+        initGame();
+    });
+    backToArenaBtn.addEventListener('click', function() {
+        cleanupModalState();
+        window.location.assign(this.dataset.url);
+    });
     initGame();
 })();
 </script>
