@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -7,7 +8,7 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse, FileResponse
 from django.core.paginator import Paginator
 from django.urls import reverse
-from django.db.models import Q, Avg, Count, Sum
+from django.db.models import Q, Avg, Count, Sum, F
 from django.utils import timezone
 from django.conf import settings
 from accounts.role_utils import get_role, is_teacher, is_supervisor, is_admin
@@ -38,14 +39,72 @@ QUIZ_REQUIRED_PASS_SCORE = 75
 QUIZ_REQUIRED_MAX_ATTEMPTS = 3
 QUIZ_FAILED_XP_PENALTY = 10
 
-GEMINI_GENERATE_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash:generateContent"
-)
+def _parts_to_openai_content(parts):
+    content = []
+    unsupported_types = []
+
+    for part in parts:
+        text = (part or {}).get('text')
+        if text:
+            content.append({
+                'type': 'text',
+                'text': text,
+            })
+            continue
+
+        inline_data = (part or {}).get('inline_data') or {}
+        mime_type = inline_data.get('mime_type', '')
+        raw_data = inline_data.get('data', '')
+
+        if mime_type.startswith('image/') and raw_data:
+            content.append({
+                'type': 'image_url',
+                'image_url': {
+                    'url': f"data:{mime_type};base64,{raw_data}",
+                },
+            })
+            continue
+
+        if mime_type:
+            unsupported_types.append(mime_type)
+
+    if unsupported_types:
+        content.append({
+            'type': 'text',
+            'text': (
+                "Quyidagi inline fayl turlari AI adapter orqali yuborilmadi: "
+                + ', '.join(sorted(set(unsupported_types)))
+            ),
+        })
+
+    return content
 
 
-def _call_gemini(parts, timeout=30):
-    api_key = getattr(settings, 'GEMINI_API_KEY', '')
+def _extract_ai_response_text(data):
+    choices = data.get('choices') or []
+    if not choices:
+        return ''
+
+    message = (choices[0] or {}).get('message') or {}
+    content = message.get('content', '')
+
+    if isinstance(content, str):
+        return content.strip()
+
+    if isinstance(content, list):
+        text_chunks = []
+        for item in content:
+            if not isinstance(item, dict):
+                continue
+            if item.get('type') == 'text' and item.get('text'):
+                text_chunks.append(item['text'])
+        return '\n'.join(text_chunks).strip()
+
+    return ''
+
+
+def _call_ai(parts, timeout=30, system_prompt=None):
+    api_key = getattr(settings, 'AI_API_KEY', '')
     if not api_key:
         return {
             'ok': False,
@@ -53,11 +112,40 @@ def _call_gemini(parts, timeout=30):
             'message': "AI kaliti sozlanmagan.",
         }
 
+    base_url = getattr(settings, 'AI_API_BASE_URL', '').rstrip('/')
+    model = getattr(settings, 'AI_MODEL', '').strip()
+    if not base_url or not model:
+        return {
+            'ok': False,
+            'error_type': 'missing_config',
+            'message': "AI konfiguratsiyasi to'liq emas.",
+        }
+
+    messages_payload = []
+    if system_prompt:
+        messages_payload.append({'role': 'system', 'content': system_prompt})
+
+    content = _parts_to_openai_content(parts)
+    if not content:
+        return {
+            'ok': False,
+            'error_type': 'empty_prompt',
+            'message': "AI uchun yuboriladigan kontent topilmadi.",
+        }
+
+    messages_payload.append({'role': 'user', 'content': content})
+
     try:
         resp = _requests.post(
-            GEMINI_GENERATE_URL,
-            params={"key": api_key},
-            json={"contents": [{"parts": parts}]},
+            f"{base_url}/chat/completions",
+            headers={
+                'Authorization': f"Bearer {api_key}",
+                'Content-Type': 'application/json',
+            },
+            json={
+                'model': model,
+                'messages': messages_payload,
+            },
             timeout=timeout,
         )
         try:
@@ -66,13 +154,7 @@ def _call_gemini(parts, timeout=30):
             data = {}
 
         if resp.status_code == 200:
-            text = (
-                data.get("candidates", [{}])[0]
-                .get("content", {})
-                .get("parts", [{}])[0]
-                .get("text", "")
-                .strip()
-            )
+            text = _extract_ai_response_text(data)
             if text:
                 return {'ok': True, 'text': text, 'data': data}
             return {
@@ -85,12 +167,14 @@ def _call_gemini(parts, timeout=30):
         error = data.get("error", {}) if isinstance(data, dict) else {}
         error_message = error.get("message", "Noma'lum xatolik")
         error_status = str(error.get("status", "")).upper()
+        lower_error_message = error_message.lower()
 
         is_quota_error = (
             resp.status_code == 429
             or error_status in {'RESOURCE_EXHAUSTED', 'RATE_LIMIT_EXCEEDED'}
-            or 'quota' in error_message.lower()
-            or 'billing' in error_message.lower()
+            or 'quota' in lower_error_message
+            or 'billing' in lower_error_message
+            or 'rate limit' in lower_error_message
         )
 
         return {
@@ -487,7 +571,7 @@ def _fallback_chat_response(message, course=None, error_type=None):
     if error_type == 'missing_key':
         guidance = (
             "AI xizmati hali sozlanmagan. "
-            "Admin `GEMINI_API_KEY` ni yangilashi kerak.\n\n"
+            "Admin `AI_API_KEY` ni yangilashi kerak.\n\n"
         )
 
     lower_message = message.lower()
@@ -754,8 +838,7 @@ def enroll_course(request, slug):
 
     if course.is_free:
         Enrollment.objects.create(student=request.user, course=course)
-        course.total_students += 1
-        course.save()
+        Course.objects.filter(pk=course.pk).update(total_students=F('total_students') + 1)
         messages.success(request, f"'{course.title}' kursiga muvaffaqiyatli yozildingiz!")
         return redirect('course_learn', slug=slug)
 
@@ -1426,18 +1509,38 @@ def payment_process(request, slug):
         return redirect('payment_checkout', slug=slug)
 
     course = get_object_or_404(Course, slug=slug)
-    amount = request.POST.get('amount')
-    payment_method = request.POST.get('payment_method', 'payme')
+    if Enrollment.objects.filter(student=request.user, course=course).exists():
+        messages.info(request, "Siz allaqachon bu kursga yozilgansiz!")
+        return redirect('course_learn', slug=slug)
 
-    Payment.objects.create(
+    raw_amount = (request.POST.get('amount') or '').strip()
+    payment_method = request.POST.get('payment_method', 'payme')
+    expected_amount = Decimal(str(course.current_price or 0))
+
+    try:
+        amount = Decimal(raw_amount)
+    except (InvalidOperation, TypeError, ValueError):
+        messages.error(request, "To'lov summasi noto'g'ri yuborildi.")
+        return redirect('payment_checkout', slug=slug)
+
+    if amount != expected_amount:
+        messages.error(request, "To'lov summasi kurs narxiga mos emas.")
+        return redirect('payment_checkout', slug=slug)
+
+    payment = Payment.objects.create(
         student=request.user, course=course, amount=amount,
         payment_method=payment_method, status='completed',
         transaction_id=f"TXN-{timezone.now().strftime('%Y%m%d%H%M%S')}"
     )
 
-    Enrollment.objects.create(student=request.user, course=course)
-    course.total_students += 1
-    course.save()
+    enrollment, created = Enrollment.objects.get_or_create(student=request.user, course=course)
+    if created:
+        Course.objects.filter(pk=course.pk).update(total_students=F('total_students') + 1)
+    else:
+        payment.status = 'failed'
+        payment.save(update_fields=['status'])
+        messages.warning(request, "Kursga yozilish allaqachon mavjud edi. To'lov qayta ishlanmadi.")
+        return redirect('course_learn', slug=slug)
 
     return redirect('payment_success', slug=slug)
 
@@ -1953,9 +2056,10 @@ Dasturlash, Django, Python va boshqa mavzularda yordam ber. Qisqa va foydali jav
     if course:
         system_prompt += f"\n\nHozir foydalanuvchi '{course.title}' kursi bilan ishlayapti."
 
-    result = _call_gemini(
-        [{"text": f"{system_prompt}\n\nSavol: {message}"}],
+    result = _call_ai(
+        [{"text": f"Savol: {message}"}],
         timeout=30,
+        system_prompt=system_prompt,
     )
     if result['ok']:
         return result['text']
@@ -2139,12 +2243,12 @@ def analyze_submission_with_ai(submission, assignment):
     import json as _json
     import re as _re
 
-    api_key = getattr(settings, 'GEMINI_API_KEY', '')
+    api_key = getattr(settings, 'AI_API_KEY', '')
 
     max_score = assignment.max_score or 100
 
     if not api_key:
-        return _build_fallback_ai_grade(submission, assignment, "GEMINI_API_KEY topilmadi")
+        return _build_fallback_ai_grade(submission, assignment, "AI_API_KEY topilmadi")
 
     # Topshiriq matni (description + instructions)
     assignment_text = assignment.description or ''
@@ -2200,9 +2304,9 @@ MUHIM: Faqat JSON formatda javob ber, boshqa matn qo'shma!"""
 
         parts = [{"text": prompt}] + extra_parts
 
-        result = _call_gemini(parts, timeout=45)
+        result = _call_ai(parts, timeout=45)
         if not result['ok']:
-            print(f"Gemini API xatosi: {result.get('error_type')} - {result.get('message')}")
+            print(f"AI API xatosi: {result.get('error_type')} - {result.get('message')}")
             return _build_fallback_ai_grade(submission, assignment, result.get('message', 'AI mavjud emas'))
 
         response_text = result['text'].strip()

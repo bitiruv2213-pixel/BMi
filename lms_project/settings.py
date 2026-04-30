@@ -90,11 +90,13 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'lms_project.middleware.RuntimeTranslationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -137,6 +139,11 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'uz'
+LANGUAGES = [
+    ('uz', "O'zbekcha"),
+    ('ru', 'Русский'),
+]
+LOCALE_PATHS = [BASE_DIR / 'locale']
 TIME_ZONE = 'Asia/Tashkent'
 USE_I18N = True
 USE_TZ = True
@@ -216,12 +223,24 @@ else:
 # Password Reset Timeout (24 hours)
 PASSWORD_RESET_TIMEOUT = 86400
 
-# ==================== GEMINI API ====================
-GEMINI_API_KEY = (
-    os.environ.get('GEMINI_API_KEY')
+# ==================== AI API ====================
+AI_API_KEY = (
+    os.environ.get('AI_API_KEY')
+    or os.environ.get('MOONSHOT_API_KEY')
+    or os.environ.get('GEMINI_API_KEY')
     or os.environ.get('GOOGLE_API_KEY')
     or os.environ.get('GOOGLE_GENERATIVE_AI_API_KEY')
     or ''
+)
+AI_API_BASE_URL = (
+    os.environ.get('AI_API_BASE_URL')
+    or os.environ.get('MOONSHOT_BASE_URL')
+    or 'https://api.moonshot.ai/v1'
+).rstrip('/')
+AI_MODEL = (
+    os.environ.get('AI_MODEL')
+    or os.environ.get('MOONSHOT_MODEL')
+    or 'kimi-k2.5'
 )
 
 # Public base URL (emails/certificates)

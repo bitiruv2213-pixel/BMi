@@ -200,7 +200,7 @@ class AITeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], reverse('dashboard'))
 
-    @patch('courses.views._call_gemini')
+    @patch('courses.views._call_ai')
     def test_teacher_chatbot_returns_fallback_payload_when_ai_unavailable(self, mock_call):
         mock_call.return_value = {
             'ok': False,
@@ -219,7 +219,7 @@ class AITeacherFlowTests(TestCase):
         self.assertTrue(payload['success'])
         self.assertIn('Django bo', payload['response'])
 
-    @patch('courses.views._call_gemini')
+    @patch('courses.views._call_ai')
     def test_ai_grading_clamps_invalid_model_output(self, mock_call):
         mock_call.return_value = {
             'ok': True,
@@ -251,7 +251,7 @@ class AITeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertFalse(self.submission.is_graded)
 
-    @patch('courses.views._call_gemini')
+    @patch('courses.views._call_ai')
     def test_teacher_burst_requests_keep_working(self, mock_call):
         mock_call.return_value = {
             'ok': False,
@@ -563,7 +563,7 @@ class AITeacherFlowTests(TestCase):
         self.assertIn('ZIP ichidagi Word matni', extracted['text'])
         self.assertTrue(any('ZIP fayli tahlil qilindi' in note for note in extracted['notes']))
 
-    @patch('courses.views._call_gemini')
+    @patch('courses.views._call_ai')
     def test_ai_prompt_includes_teacher_and_student_file_context(self, mock_call):
         mock_call.return_value = {
             'ok': True,
@@ -605,7 +605,7 @@ class AITeacherFlowTests(TestCase):
         self.assertIn('Teacher requirement content', sent_prompt)
         self.assertIn('Student answer content', sent_prompt)
 
-    @patch('courses.views._call_gemini')
+    @patch('courses.views._call_ai')
     def test_ai_prompt_includes_zip_contents(self, mock_call):
         mock_call.return_value = {
             'ok': True,
